@@ -1,0 +1,54 @@
+{
+  "name": "buscador_equivalencias",
+  "version": "1.0.0",
+  "description": "Descripción de tu app",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win",
+    "build:frontend": "cd frontend && ng build --configuration production --base-href ./",
+    "build:app": "npm run build:frontend && electron-builder --win",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm start"
+  },
+  "build": {
+    "appId": "com.navitrans.tu-app-nombre",
+    "productName": "Tu App Nombre",
+    "asar": false,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron/**/*",
+      "backend/src/**/*",
+      "backend/package.json",
+      "backend/node_modules/**/*",
+      "frontend/dist/mi-app-frontend/browser/**/*",
+      "data/.gitkeep"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^39.2.4",
+    "electron-builder": "^26.0.12"
+  }
+}

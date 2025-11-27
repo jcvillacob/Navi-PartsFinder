@@ -1,0 +1,60 @@
+<div class="h-full bg-slate-900 rounded-2xl border border-orange-500/30 p-2 relative shadow-[0_0_40px_-10px_rgba(249,115,22,0.1)] flex flex-col group">
+  <!-- Etiqueta flotante -->
+  <div class="absolute top-6 left-6 z-10 bg-orange-500/90 backdrop-blur-sm text-white font-bold px-3 py-1 rounded-lg text-xs shadow-lg border border-orange-400/50">
+    VISTA PREVIA
+  </div>
+  
+  <!-- Contenedor de la imagen -->
+  <div class="flex-grow bg-slate-950 rounded-xl overflow-hidden relative group">
+    <!-- Imagen principal -->
+    <div class="w-full h-full relative cursor-pointer" (click)="toggleZoom()">
+      <img 
+        [src]="selectedImage || part?.imageUrl" 
+        [alt]="part?.description" 
+        class="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700"
+      />
+      
+      <!-- Icono de zoom al hover -->
+      <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 pointer-events-none">
+        <div class="bg-black/50 p-3 rounded-full backdrop-blur-sm border border-white/20">
+          <lucide-icon [img]="ZoomIn" [size]="24" class="text-white"></lucide-icon>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Overlay gradiente -->
+    <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-90 pointer-events-none"></div>
+    
+    <!-- Info sobre la imagen -->
+    <!-- <div class="absolute bottom-0 left-0 right-0 p-6 pointer-events-none">
+      <h3 class="text-orange-400 font-bold mb-1 flex items-center gap-2">
+        <lucide-icon [img]="Box" [size]="16"></lucide-icon>
+        Visualización 3D
+      </h3>
+      <p class="text-slate-400 text-sm mb-4">Rotar la imagen para verificar dimensiones.</p>
+      
+      <div class="flex gap-2 pointer-events-auto" *ngIf="part?.thumbnails?.length">
+        <div 
+          *ngFor="let thumb of part!.thumbnails"
+          (click)="selectThumbnail(thumb); $event.stopPropagation()"
+          class="h-14 w-14 rounded-lg border border-slate-700 bg-slate-800 overflow-hidden cursor-pointer hover:border-orange-500 transition-colors">
+          <img [src]="thumb" class="w-full h-full object-cover opacity-70 hover:opacity-100 transition-opacity" />
+        </div>
+      </div>
+    </div> -->
+  </div>
+
+  <!-- Modal de Zoom -->
+  <div *ngIf="isZoomed" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200" (click)="toggleZoom()">
+    <button class="absolute top-4 right-4 text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors z-50">
+      <lucide-icon [img]="X" [size]="32"></lucide-icon>
+    </button>
+    
+    <img 
+      [src]="selectedImage || part?.imageUrl" 
+      [alt]="part?.description"
+      class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-300"
+      (click)="$event.stopPropagation()"
+    />
+  </div>
+</div>

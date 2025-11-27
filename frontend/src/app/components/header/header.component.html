@@ -1,0 +1,24 @@
+<header class="w-full bg-slate-900 border-b border-slate-800 py-4 px-6 mb-8 flex items-center justify-between shadow-lg">
+  <div class="flex items-center gap-3">
+    <div class="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-indigo-500/20 shadow-lg">
+      <lucide-icon [img]="Factory" [size]="24"></lucide-icon>
+    </div>
+    <div>
+      <h1 class="text-xl font-bold text-white tracking-wide">
+        PARTS<span class="text-indigo-400">FINDER</span> PRO
+      </h1>
+      <p class="text-xs text-slate-500">Sistema de Catálogo Inteligente</p>
+    </div>
+  </div>
+  <div class="flex items-center gap-4">
+    <input type="file" #fileInput (change)="onFileSelected($event)" class="hidden" accept=".xlsx, .xls" />
+    <button 
+      (click)="fileInput.click()"
+      class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm font-medium shadow-lg shadow-indigo-500/20">
+      <lucide-icon [img]="Upload" [size]="18"></lucide-icon>
+      Importar Datos
+    </button>
+    <!-- Avatar placeholder -->
+    <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-700"></div>
+  </div>
+</header>

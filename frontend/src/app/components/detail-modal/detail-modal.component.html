@@ -1,0 +1,79 @@
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4" *ngIf="compatibility">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" (click)="onClose()"></div>
+
+  <!-- Modal Content -->
+  <div class="relative bg-slate-900 border border-indigo-500/30 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+    
+    <!-- Header -->
+    <div class="bg-indigo-900/20 px-6 py-4 border-b border-indigo-900/30 flex justify-between items-center">
+      <h3 class="text-xl font-bold text-white">Detalle de Referencia</h3>
+      <button (click)="onClose()" class="text-slate-400 hover:text-white transition-colors p-1 hover:bg-white/10 rounded-full">
+        <lucide-icon [img]="X" [size]="20"></lucide-icon>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="p-6 space-y-6">
+      
+      <!-- Main Info -->
+      <div class="flex flex-col gap-1">
+        <span class="text-xs text-indigo-300 uppercase tracking-wider font-semibold">Número de Parte</span>
+        <span class="text-3xl font-mono font-bold text-white">{{ compatibility.compatiblePart }}</span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
+          <span class="text-xs text-slate-400 block mb-1">Equipo</span>
+          <span class="text-slate-200 font-medium">{{ compatibility.equipment }}</span>
+        </div>
+        <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
+          <span class="text-xs text-slate-400 block mb-1">Marca Original</span>
+          <span class="text-slate-200 font-medium">{{ compatibility.brand }}</span>
+        </div>
+      </div>
+
+      <!-- Availability Section -->
+      <div class="bg-slate-800/30 rounded-xl p-4 border border-slate-700/30 space-y-4">
+        
+        <!-- Status -->
+        <div class="flex items-center justify-between">
+          <span class="text-slate-300">Disponibilidad</span>
+          <div class="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium border"
+               [ngClass]="isAvailable ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'">
+            <lucide-icon [img]="isAvailable ? CheckCircle2 : XCircle" [size]="16"></lucide-icon>
+            {{ isAvailable ? 'Disponible' : 'No Disponible' }}
+          </div>
+        </div>
+
+        <!-- Quantity -->
+        <div class="flex items-center justify-between" *ngIf="isAvailable">
+          <span class="text-slate-300 flex items-center gap-2">
+            <lucide-icon [img]="Package" [size]="16" class="text-indigo-400"></lucide-icon>
+            Cantidad
+          </span>
+          <span class="text-white font-mono font-bold">{{ quantity }} Unidades</span>
+        </div>
+
+        <!-- Location -->
+        <div class="flex items-center justify-between">
+          <span class="text-slate-300 flex items-center gap-2">
+            <lucide-icon [img]="MapPin" [size]="16" class="text-indigo-400"></lucide-icon>
+            Sede
+          </span>
+          <span class="text-white font-medium">{{ location }}</span>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="bg-slate-950/30 px-6 py-4 border-t border-indigo-900/30 flex justify-end">
+      <button (click)="onClose()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm">
+        Cerrar
+      </button>
+    </div>
+
+  </div>
+</div>

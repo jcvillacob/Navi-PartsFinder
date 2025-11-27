@@ -1,0 +1,32 @@
+<div class="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-indigo-500 selection:text-white pb-10">
+  
+  <!-- Header -->
+  <app-header></app-header>
+
+  <main class="max-w-[1600px] mx-auto px-8 md:px-12">
+    
+    <!-- Buscador -->
+    <app-search-bar (search)="onSearch($event)"></app-search-bar>
+
+    <!-- Loading state (opcional) -->
+    <div *ngIf="isLoading" class="text-center py-20">
+      <p class="text-slate-400">Cargando datos...</p>
+    </div>
+
+    <!-- Layout principal -->
+    <div *ngIf="!isLoading" class="grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-[600px]">
+      
+      <!-- Columna izquierda (Info + Tabla) -->
+      <div class="lg:col-span-8 flex flex-col gap-8 h-full">
+        <app-part-info [part]="currentPart"></app-part-info>
+        <app-compatibility-table [compatibilities]="compatibilities"></app-compatibility-table>
+      </div>
+
+      <!-- Columna derecha (Preview) -->
+      <div class="lg:col-span-4 h-full">
+        <app-part-preview [part]="currentPart"></app-part-preview>
+      </div>
+
+    </div>
+  </main>
+</div>
