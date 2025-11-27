@@ -1,7 +1,8 @@
-<div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 backdrop-blur-md relative overflow-hidden group shadow-xl">
+<div
+  class="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 backdrop-blur-md relative overflow-hidden group shadow-xl">
   <!-- Efecto decorativo -->
   <div class="absolute top-0 right-0 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
-  
+
   <div class="flex items-center gap-2 mb-6">
     <lucide-icon [img]="Info" [size]="20" class="text-indigo-400"></lucide-icon>
     <h2 class="text-sm font-bold text-indigo-200 uppercase tracking-wider">Información General</h2>
@@ -12,19 +13,13 @@
       <h3 class="text-5xl font-bold text-white mb-2 font-mono tracking-tight">{{ part.partNumber }}</h3>
       <p class="text-xl text-slate-300 font-medium">{{ part.description }}</p>
     </div>
-    <div class="grid grid-cols-2 gap-4 text-sm">
-      <div class="bg-slate-800/40 p-4 rounded-xl border border-slate-700/30 hover:border-indigo-500/30 transition-colors">
+    <div class="grid grid-cols-1 gap-4 text-sm">
+      <div
+        class="bg-slate-800/40 p-4 rounded-xl border border-slate-700/30 hover:border-indigo-500/30 transition-colors">
         <span class="block text-slate-400 text-xs mb-2 uppercase tracking-wide">Marca Repuesto</span>
         <span class="font-bold text-white text-lg flex items-center gap-2">
           <lucide-icon [img]="Factory" [size]="16" class="text-indigo-400"></lucide-icon>
           {{ part.brand }}
-        </span>
-      </div>
-      <div class="bg-slate-800/40 p-4 rounded-xl border border-slate-700/30 hover:border-indigo-500/30 transition-colors">
-        <span class="block text-slate-400 text-xs mb-2 uppercase tracking-wide">Categoría</span>
-        <span class="font-bold text-white text-lg flex items-center gap-2">
-          <lucide-icon [img]="Settings" [size]="16" class="text-indigo-400"></lucide-icon>
-          {{ part.category }}
         </span>
       </div>
     </div>

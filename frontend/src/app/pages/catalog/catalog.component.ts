@@ -31,8 +31,8 @@ export class CatalogComponent implements OnInit {
   constructor(private partsService: PartsService) {}
 
   ngOnInit(): void {
-    // Cargar datos iniciales
-    this.loadPartData('NAV81N6-26601');
+    // No cargar datos iniciales, esperar a que el usuario busque
+    // this.loadPartData('NAV81N6-26601');
   }
 
   onSearch(searchTerm: string): void {

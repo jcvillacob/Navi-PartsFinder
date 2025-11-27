@@ -1,6 +1,8 @@
-<header class="w-full bg-slate-900 border-b border-slate-800 py-4 px-6 mb-8 flex items-center justify-between shadow-lg">
+<header
+  class="w-full bg-slate-900 border-b border-slate-800 py-4 px-6 mb-8 flex items-center justify-between shadow-lg">
   <div class="flex items-center gap-3">
-    <div class="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-indigo-500/20 shadow-lg">
+    <div
+      class="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-indigo-500/20 shadow-lg">
       <lucide-icon [img]="Factory" [size]="24"></lucide-icon>
     </div>
     <div>
@@ -12,13 +14,27 @@
   </div>
   <div class="flex items-center gap-4">
     <input type="file" #fileInput (change)="onFileSelected($event)" class="hidden" accept=".xlsx, .xls" />
-    <button 
-      (click)="fileInput.click()"
+    <button (click)="fileInput.click()"
       class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm font-medium shadow-lg shadow-indigo-500/20">
       <lucide-icon [img]="Upload" [size]="18"></lucide-icon>
       Importar Datos
     </button>
     <!-- Avatar placeholder -->
     <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-700"></div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div *ngIf="message" class="fixed bottom-8 right-8 max-w-md rounded-xl shadow-2xl border z-50 p-4 backdrop-blur-sm"
+    [ngClass]="{
+         'bg-blue-900/90 border-blue-500 text-blue-100': message.type === 'loading',
+         'bg-green-900/90 border-green-500 text-green-100': message.type === 'success',
+         'bg-red-900/90 border-red-500 text-red-100': message.type === 'error'
+       }">
+    <div class="flex items-start gap-3">
+      <div *ngIf="message.type === 'loading'" class="flex items-center">
+        <div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+      </div>
+      <p class="text-sm font-medium flex-1">{{ message.text }}</p>
+    </div>
   </div>
 </header>
