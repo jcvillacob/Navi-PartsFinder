@@ -4,7 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule, Search } from 'lucide-angular';
 import { PartsService } from '../../services/parts.service';
 import { Subject, Subscription } from 'rxjs';
-import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, switchMap, catchError } from 'rxjs/operators';
+import { of } from 'rxjs';
 
 interface Suggestion {
   value: string;
@@ -22,7 +23,7 @@ interface Suggestion {
 export class SearchBarComponent implements OnDestroy {
   readonly Search = Search;
 
-  searchTerm: string = 'NAV81N6-26601';
+  searchTerm: string = '';
   suggestions: Suggestion[] = [];
   showSuggestions: boolean = false;
   selectedIndex: number = -1;
@@ -33,12 +34,22 @@ export class SearchBarComponent implements OnDestroy {
   @Output() search = new EventEmitter<string>();
 
   constructor(private partsService: PartsService) {
-    // Configurar debounce para las sugerencias
+    // Configurar debounce para las sugerencias con switchMap para cancelar peticiones anteriores
     this.subscriptions.add(
       this.searchSubject.pipe(
         debounceTime(300),
-        distinctUntilChanged()
-      ).subscribe(term => this.loadSuggestions(term))
+        distinctUntilChanged(),
+        switchMap(term => this.partsService.getSuggestions(term).pipe(
+          catchError(err => {
+            console.error('Error loading suggestions:', err);
+            return of([]);
+          })
+        ))
+      ).subscribe(data => {
+        this.suggestions = data;
+        this.showSuggestions = this.suggestions.length > 0;
+        this.selectedIndex = -1;
+      })
     );
   }
 
@@ -56,21 +67,6 @@ export class SearchBarComponent implements OnDestroy {
       this.showSuggestions = false;
       this.selectedIndex = -1;
     }
-  }
-
-  private loadSuggestions(term: string): void {
-    this.partsService.getSuggestions(term).subscribe({
-      next: (data) => {
-        this.suggestions = data;
-        this.showSuggestions = this.suggestions.length > 0;
-        this.selectedIndex = -1;
-      },
-      error: (err) => {
-        console.error('Error loading suggestions:', err);
-        this.suggestions = [];
-        this.showSuggestions = false;
-      }
-    });
   }
 
   onSearch(): void {

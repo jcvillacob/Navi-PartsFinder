@@ -66,4 +66,13 @@ export class PartsService {
   getSuggestions(searchTerm: string): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/suggestions?q=${encodeURIComponent(searchTerm)}`);
   }
+
+  /**
+   * Subir imagen para una parte
+   */
+  uploadPartImage(partNumber: string, file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('image', file);
+    return this.http.post(`${this.apiUrl}/parts/${partNumber}/image`, formData);
+  }
 }

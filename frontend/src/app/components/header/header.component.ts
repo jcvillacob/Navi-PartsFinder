@@ -1,25 +1,41 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { LucideAngularModule, Factory, Upload } from 'lucide-angular';
+import { LucideAngularModule, Factory, Upload, Image } from 'lucide-angular';
 import { PartsService } from '../../services/parts.service';
 import * as XLSX from 'xlsx';
 import { Compatibility } from '../../models/compatibility.model';
+import { ImageUploadModalComponent } from '../image-upload-modal/image-upload-modal.component';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule],
+  imports: [CommonModule, LucideAngularModule, ImageUploadModalComponent],
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss'
 })
 export class HeaderComponent {
   readonly Factory = Factory;
   readonly Upload = Upload;
+  readonly Image = Image;
 
   isLoading = false;
+  showImageModal = false;
   message: { text: string; type: 'loading' | 'success' | 'error' } | null = null;
 
   constructor(private partsService: PartsService) {}
+
+  openImageUploadModal(): void {
+    this.showImageModal = true;
+  }
+
+  closeImageUploadModal(): void {
+    this.showImageModal = false;
+  }
+
+  onImageUploaded(): void {
+    this.message = { text: 'Imagen subida exitosamente', type: 'success' };
+    setTimeout(() => this.message = null, 5000);
+  }
 
   onFileSelected(event: any) {
     const file: File = event.target.files[0];

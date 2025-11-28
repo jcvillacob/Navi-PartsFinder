@@ -14,11 +14,19 @@
   </div>
   <div class="flex items-center gap-4">
     <input type="file" #fileInput (change)="onFileSelected($event)" class="hidden" accept=".xlsx, .xls" />
+
     <button (click)="fileInput.click()"
       class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm font-medium shadow-lg shadow-indigo-500/20">
       <lucide-icon [img]="Upload" [size]="18"></lucide-icon>
       Importar Datos
     </button>
+
+    <button (click)="openImageUploadModal()"
+      class="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-lg transition-colors text-sm font-medium shadow-lg">
+      <lucide-icon [img]="Image" [size]="18"></lucide-icon>
+      Subir Imagen
+    </button>
+
     <!-- Avatar placeholder -->
     <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-700"></div>
   </div>
@@ -38,3 +46,6 @@
     </div>
   </div>
 </header>
+
+<app-image-upload-modal [isOpen]="showImageModal" (close)="closeImageUploadModal()" (imageUploaded)="onImageUploaded()">
+</app-image-upload-modal>
