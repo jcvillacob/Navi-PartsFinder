@@ -113,10 +113,8 @@ app.get("/api/search", async (req, res) => {
       compatibilities = stmt.all();
     }
 
-    const { getInventory } = require("./services/inventory.service");
-
-    // Mapeo inicial
-    const baseMapped = compatibilities.map((c) => ({
+    // Mapeo de compatibilidades
+    const mapped = compatibilities.map((c) => ({
       partNumber: c.part_number,
       description: c.description,
       compatiblePart: c.compatible_part_number,
@@ -125,22 +123,7 @@ app.get("/api/search", async (req, res) => {
       spareBrand: c.response_brand,
     }));
 
-    // Enriquecer con datos de inventario externo
-    // Usamos Promise.all para hacer las consultas en paralelo
-    const enrichedMapped = await Promise.all(
-      baseMapped.map(async (item) => {
-        // Consultamos disponibilidad usando el número de parte de Navitrans (item.partNumber)
-        const inventory = await getInventory(item.partNumber);
-        return {
-          ...item,
-          quantity: inventory.quantity,
-          location: inventory.location,
-          availability: inventory.quantity > 0,
-        };
-      })
-    );
-
-    res.json(enrichedMapped);
+    res.json(mapped);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
