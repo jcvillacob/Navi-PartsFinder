@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { LucideAngularModule, X, CheckCircle2, XCircle, MapPin, Package } from 'lucide-angular';
-import { Compatibility } from '../../models/compatibility.model';
+import { LucideAngularModule, X, CheckCircle2, XCircle, MapPin, Package, Loader2 } from 'lucide-angular';
+import { InventoryDetail, InventoryLocation } from '../../services/parts.service';
 
 @Component({
   selector: 'app-detail-modal',
@@ -11,53 +11,36 @@ import { Compatibility } from '../../models/compatibility.model';
   styles: []
 })
 export class DetailModalComponent {
-  @Input() set compatibility(value: Compatibility | undefined) {
-    this._compatibility = value;
-    if (value) {
-      this.calculateMockValues(value);
-    }
-  }
-  get compatibility(): Compatibility | undefined {
-    return this._compatibility;
-  }
+  @Input() inventoryDetail?: InventoryDetail;
+  @Input() isLoading: boolean = false;
+  @Input() isOpen: boolean = false;
 
   @Output() close = new EventEmitter<void>();
-
-  private _compatibility?: Compatibility;
-  
-  // Stable properties for view
-  isAvailable: boolean = false;
-  quantity: number = 0;
-  location: string = 'Aguacatala';
 
   readonly X = X;
   readonly CheckCircle2 = CheckCircle2;
   readonly XCircle = XCircle;
   readonly MapPin = MapPin;
   readonly Package = Package;
+  readonly Loader2 = Loader2;
 
   onClose(): void {
     this.close.emit();
   }
 
-  private calculateMockValues(item: Compatibility): void {
-    // Availability
-    if (item.availability !== undefined) {
-      this.isAvailable = item.availability;
-    } else {
-      // Mock: 70% chance of being available
-      // Use a deterministic hash or just random but stored once
-      this.isAvailable = Math.random() > 0.3;
-    }
+  get isAvailable(): boolean {
+    return this.inventoryDetail?.available ?? false;
+  }
 
-    // Quantity
-    if (item.quantity !== undefined) {
-      this.quantity = item.quantity;
-    } else {
-      this.quantity = Math.floor(Math.random() * 50) + 1;
-    }
+  get totalQuantity(): number {
+    return this.inventoryDetail?.totalQuantity ?? 0;
+  }
 
-    // Location
-    this.location = item.location || 'Aguacatala';
+  get locations(): InventoryLocation[] {
+    return this.inventoryDetail?.locations ?? [];
+  }
+
+  get partNumber(): string {
+    return this.inventoryDetail?.partNumber ?? '';
   }
 }

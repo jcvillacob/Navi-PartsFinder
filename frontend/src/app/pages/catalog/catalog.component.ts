@@ -1,11 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { forkJoin } from 'rxjs';
 import { HeaderComponent } from '../../components/header/header.component';
 import { SearchBarComponent } from '../../components/search-bar/search-bar.component';
 import { PartInfoComponent } from '../../components/part-info/part-info.component';
 import { CompatibilityTableComponent } from '../../components/compatibility-table/compatibility-table.component';
 import { PartPreviewComponent } from '../../components/part-preview/part-preview.component';
-import { PartsService } from '../../services/parts.service';
+import { DetailModalComponent } from '../../components/detail-modal/detail-modal.component';
+import { PartsService, InventoryDetail } from '../../services/parts.service';
 import { Part } from '../../models/part.model';
 import { Compatibility } from '../../models/compatibility.model';
 
@@ -18,7 +20,8 @@ import { Compatibility } from '../../models/compatibility.model';
     SearchBarComponent,
     PartInfoComponent,
     CompatibilityTableComponent,
-    PartPreviewComponent
+    PartPreviewComponent,
+    DetailModalComponent
   ],
   templateUrl: './catalog.component.html',
   styleUrl: './catalog.component.scss'
@@ -28,11 +31,15 @@ export class CatalogComponent implements OnInit {
   compatibilities: Compatibility[] = [];
   isLoading: boolean = false;
 
+  // Modal de disponibilidad
+  isModalOpen: boolean = false;
+  isModalLoading: boolean = false;
+  inventoryDetail?: InventoryDetail;
+
   constructor(private partsService: PartsService) {}
 
   ngOnInit(): void {
     // No cargar datos iniciales, esperar a que el usuario busque
-    // this.loadPartData('NAV81N6-26601');
   }
 
   onSearch(searchTerm: string): void {
@@ -40,28 +47,53 @@ export class CatalogComponent implements OnInit {
     this.loadPartData(searchTerm);
   }
 
-  private loadPartData(partNumber: string): void {
-    this.isLoading = true;
+  onCheckAvailability(partNumber: string): void {
+    this.isModalOpen = true;
+    this.isModalLoading = true;
+    this.inventoryDetail = undefined;
 
-    // Obtener información de la parte
-    this.partsService.getPartByNumber(partNumber).subscribe({
-      next: (part) => {
-        this.currentPart = part;
-        this.isLoading = false;
+    this.partsService.getInventoryDetail(partNumber).subscribe({
+      next: (detail) => {
+        this.inventoryDetail = detail;
+        this.isModalLoading = false;
       },
       error: (error) => {
-        console.error('Error cargando parte:', error);
-        this.isLoading = false;
+        console.error('Error consultando inventario:', error);
+        this.inventoryDetail = {
+          partNumber,
+          totalQuantity: 0,
+          available: false,
+          locations: [],
+          error: 'Error al consultar inventario'
+        };
+        this.isModalLoading = false;
       }
     });
+  }
 
-    // Obtener compatibilidades
-    this.partsService.getCompatibilities(partNumber).subscribe({
-      next: (compatibilities) => {
+  onCloseModal(): void {
+    this.isModalOpen = false;
+    this.inventoryDetail = undefined;
+  }
+
+  private loadPartData(partNumber: string): void {
+    this.isLoading = true;
+    this.currentPart = undefined;
+    this.compatibilities = [];
+
+    // Ejecutar ambas consultas en paralelo y esperar a que terminen
+    forkJoin({
+      part: this.partsService.getPartByNumber(partNumber),
+      compatibilities: this.partsService.getCompatibilities(partNumber)
+    }).subscribe({
+      next: ({ part, compatibilities }) => {
+        this.currentPart = part;
         this.compatibilities = compatibilities;
+        this.isLoading = false;
       },
       error: (error) => {
-        console.error('Error cargando compatibilidades:', error);
+        console.error('Error cargando datos:', error);
+        this.isLoading = false;
       }
     });
   }

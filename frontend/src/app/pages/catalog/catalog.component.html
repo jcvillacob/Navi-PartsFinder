@@ -1,24 +1,25 @@
 <div class="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-indigo-500 selection:text-white pb-10">
-  
+
   <!-- Header -->
   <app-header></app-header>
 
   <main class="max-w-[1600px] mx-auto px-8 md:px-12">
-    
+
     <!-- Buscador -->
     <app-search-bar (search)="onSearch($event)"></app-search-bar>
 
-    <!-- Loading state (opcional) -->
-    <div *ngIf="isLoading" class="text-center py-20">
-      <p class="text-slate-400">Cargando datos...</p>
+    <!-- Loading state -->
+    <div *ngIf="isLoading" class="flex flex-col items-center justify-center py-20">
+      <div class="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mb-4"></div>
+      <p class="text-slate-400">Buscando información...</p>
     </div>
 
     <!-- Layout principal -->
     <div *ngIf="!isLoading" class="grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-[600px]">
-      
+
       <!-- Columna izquierda (Info + Tabla) -->
       <div class="lg:col-span-8 flex flex-col gap-8 h-full">
-        <app-part-info [part]="currentPart"></app-part-info>
+        <app-part-info [part]="currentPart" (checkAvailability)="onCheckAvailability($event)"></app-part-info>
         <app-compatibility-table [compatibilities]="compatibilities"></app-compatibility-table>
       </div>
 
@@ -29,4 +30,12 @@
 
     </div>
   </main>
+
+  <!-- Modal de Disponibilidad -->
+  <app-detail-modal
+    [isOpen]="isModalOpen"
+    [isLoading]="isModalLoading"
+    [inventoryDetail]="inventoryDetail"
+    (close)="onCloseModal()">
+  </app-detail-modal>
 </div>

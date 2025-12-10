@@ -21,3 +21,6 @@ backend.log
 # IDE
 .idea/
 .vscode/
+
+Documentacion_Tecnica_Inventario_Navitrans.md
+.env

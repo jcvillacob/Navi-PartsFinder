@@ -1,55 +1,43 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of, BehaviorSubject, tap } from 'rxjs';
+import { Observable, of, map } from 'rxjs';
 import { Part } from '../models/part.model';
 import { Compatibility } from '../models/compatibility.model';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class PartsService {
   private apiUrl = 'http://localhost:3000/api';
+  private baseUrl = 'http://localhost:3000';
 
-  private compatibilitiesSubject = new BehaviorSubject<Compatibility[]>([]);
-  public compatibilities$ = this.compatibilitiesSubject.asObservable();
-
-  constructor(private http: HttpClient) {
-    this.loadCompatibilities();
-  }
-
-  private loadCompatibilities(searchTerm?: string) {
-    const url = searchTerm 
-      ? `${this.apiUrl}/compatibilities?q=${encodeURIComponent(searchTerm)}`
-      : `${this.apiUrl}/compatibilities`;
-      
-    this.http.get<Compatibility[]>(url).subscribe({
-      next: (data) => this.compatibilitiesSubject.next(data),
-      error: (err) => console.error('Error loading compatibilities', err)
-    });
-  }
+  constructor(private http: HttpClient) {}
 
   /**
    * Obtener información de una parte por su número
    */
   getPartByNumber(partNumber: string): Observable<Part> {
-    return this.http.get<Part>(`${this.apiUrl}/parts/${partNumber}`);
+    return this.http.get<Part>(`${this.apiUrl}/parts/${partNumber}`).pipe(
+      map(part => ({
+        ...part,
+        imageUrl: part.imageUrl ? `${this.baseUrl}${part.imageUrl}` : undefined
+      }))
+    );
   }
 
   /**
    * Obtener lista de compatibilidades para una parte (con búsqueda)
    */
   getCompatibilities(searchTerm: string): Observable<Compatibility[]> {
-    this.loadCompatibilities(searchTerm);
-    return this.compatibilities$;
+    const url = `${this.apiUrl}/search?q=${encodeURIComponent(searchTerm)}`;
+    return this.http.get<Compatibility[]>(url);
   }
 
   /**
    * Actualizar la lista de compatibilidades (importación Excel)
    */
   updateCompatibilities(data: Compatibility[]): Observable<any> {
-    return this.http.post(`${this.apiUrl}/compatibilities/import`, data).pipe(
-      tap(() => this.loadCompatibilities())
-    );
+    return this.http.post(`${this.apiUrl}/compatibilities/import`, data);
   }
 
   /**
@@ -75,4 +63,28 @@ export class PartsService {
     formData.append('image', file);
     return this.http.post(`${this.apiUrl}/parts/${partNumber}/image`, formData);
   }
+
+  /**
+   * Obtener detalle de inventario por sede para una pieza
+   */
+  getInventoryDetail(partNumber: string): Observable<InventoryDetail> {
+    return this.http.get<InventoryDetail>(`${this.apiUrl}/inventory/${partNumber}`);
+  }
+}
+
+export interface InventoryLocation {
+  partNumber: string;
+  zona: string;
+  sede: string;
+  almacen: string;
+  cantidad: number;
+  costoUnitario: number;
+}
+
+export interface InventoryDetail {
+  partNumber: string;
+  totalQuantity: number;
+  available: boolean;
+  locations: InventoryLocation[];
+  error?: string;
 }

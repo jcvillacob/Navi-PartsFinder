@@ -3,9 +3,16 @@
   <!-- Efecto decorativo -->
   <div class="absolute top-0 right-0 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
 
-  <div class="flex items-center gap-2 mb-6">
-    <lucide-icon [img]="Info" [size]="20" class="text-indigo-400"></lucide-icon>
-    <h2 class="text-sm font-bold text-indigo-200 uppercase tracking-wider">Información General</h2>
+  <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center gap-2">
+      <lucide-icon [img]="Info" [size]="20" class="text-indigo-400"></lucide-icon>
+      <h2 class="text-sm font-bold text-indigo-200 uppercase tracking-wider">Información General</h2>
+    </div>
+    <button *ngIf="part" (click)="onCheckAvailability()"
+      class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm shadow-lg shadow-emerald-900/30">
+      <lucide-icon [img]="Package" [size]="16"></lucide-icon>
+      Disponibilidad
+    </button>
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-2 gap-8" *ngIf="part">
