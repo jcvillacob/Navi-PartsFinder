@@ -12,14 +12,15 @@
     "dev:frontend": "cd frontend && npm start"
   },
   "build": {
-    "appId": "com.navitrans.tu-app-nombre",
-    "productName": "Tu App Nombre",
+    "appId": "com.navitrans.buscador-equivalencias",
+    "productName": "Buscador de Equivalencias",
     "asar": false,
     "directories": {
       "output": "dist"
     },
     "files": [
       "electron/**/*",
+      "assets/**/*",
       "backend/src/**/*",
       "backend/package.json",
       "backend/node_modules/**/*",
@@ -35,13 +36,17 @@
           ]
         }
       ],
+      "icon": "assets/logo.ico",
       "signAndEditExecutable": false
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "installerIcon": "assets/logo.ico",
+      "uninstallerIcon": "assets/logo.ico",
+      "installerHeaderIcon": "assets/logo.ico"
     }
   },
   "keywords": [],
