@@ -8,6 +8,8 @@ let mainWindow;
 let backendProcess;
 let backendPort = 3000;
 
+app.setAppUserModelId("com.navitrans.buscador-equivalencias");
+
 function startBackend() {
   const userDataPath = app.getPath("userData");
   const appPath = path.dirname(app.getPath("exe"));
@@ -32,7 +34,7 @@ function startBackend() {
   logStream.write(`UserData: ${userDataPath}\n`);
   logStream.write(`AppPath: ${appPath}\n`);
 
-  console.log("🚀 Iniciando backend desde:", backendPath);
+  console.log("ðŸš€ Iniciando backend desde:", backendPath);
 
   const backendDir = path.dirname(backendPath);
 
@@ -56,7 +58,7 @@ function startBackend() {
     const portMatch = msg.match(/localhost:(\d+)/);
     if (portMatch) {
       backendPort = parseInt(portMatch[1]);
-      console.log(`📍 Backend en puerto: ${backendPort}`);
+      console.log(`ðŸ“ Backend en puerto: ${backendPort}`);
     }
   });
 
@@ -92,7 +94,7 @@ function waitForBackend(port, maxAttempts = 30) {
 
       req.on("error", () => {
         if (attempts >= maxAttempts) {
-          reject(new Error("Backend no respondió"));
+          reject(new Error("Backend no respondiÃ³"));
         } else {
           setTimeout(check, 200);
         }
@@ -148,10 +150,10 @@ app.whenReady().then(async () => {
 
   try {
     await waitForBackend(backendPort);
-    console.log("✅ Backend listo");
+    console.log("âœ… Backend listo");
     createWindow();
   } catch (error) {
-    console.error("❌ Error esperando backend:", error);
+    console.error("âŒ Error esperando backend:", error);
     createWindow(); // Abrir ventana de todas formas
   }
 });

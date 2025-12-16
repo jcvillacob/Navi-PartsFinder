@@ -1,59 +1,61 @@
 {
-  "name": "buscador_equivalencias",
-  "version": "1.0.0",
-  "description": "Descripción de tu app",
-  "main": "electron/main.js",
-  "scripts": {
-    "start": "electron .",
-    "build": "electron-builder --win",
-    "build:frontend": "cd frontend && ng build --configuration production --base-href ./",
-    "build:app": "npm run build:frontend && electron-builder --win",
-    "dev:backend": "cd backend && npm run dev",
-    "dev:frontend": "cd frontend && npm start"
-  },
-  "build": {
-    "appId": "com.navitrans.buscador-equivalencias",
-    "productName": "Buscador de Equivalencias",
-    "asar": false,
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "electron/**/*",
-      "assets/**/*",
-      "backend/src/**/*",
-      "backend/package.json",
-      "backend/node_modules/**/*",
-      "frontend/dist/mi-app-frontend/browser/**/*",
-      "data/.gitkeep"
-    ],
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon": "assets/logo.ico",
-      "signAndEditExecutable": false
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "installerIcon": "assets/logo.ico",
-      "uninstallerIcon": "assets/logo.ico",
-      "installerHeaderIcon": "assets/logo.ico"
-    }
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "electron": "^39.2.4",
-    "electron-builder": "^26.0.12"
-  }
+    "name":  "buscador_equivalencias",
+    "version":  "1.0.0",
+    "description":  "DescripciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n de tu app",
+    "main":  "electron/main.js",
+    "scripts":  {
+                    "start":  "electron .",
+                    "build":  "electron-builder --win",
+                    "build:frontend":  "cd frontend \u0026\u0026 ng build --configuration production --base-href ./",
+                    "build:app":  "npm run build:frontend \u0026\u0026 electron-builder --win",
+                    "dev:backend":  "cd backend \u0026\u0026 npm run dev",
+                    "dev:frontend":  "cd frontend \u0026\u0026 npm start"
+                },
+    "build":  {
+                  "appId":  "com.navitrans.buscador-equivalencias",
+                  "productName":  "Buscador de Equivalencias",
+                  "asar":  false,
+                  "directories":  {
+                                      "output":  "dist"
+                                  },
+                  "files":  [
+                                "electron/**/*",
+                                "assets/**/*",
+                                "backend/src/**/*",
+                                "backend/package.json",
+                                "backend/node_modules/**/*",
+                                "frontend/dist/mi-app-frontend/browser/**/*",
+                                "data/.gitkeep"
+                            ],
+                  "win":  {
+                              "target":  [
+                                             {
+                                                 "target":  "nsis",
+                                                 "arch":  [
+                                                              "x64"
+                                                          ]
+                                             }
+                                         ],
+                              "icon":  "assets/logo.ico",
+                              "signAndEditExecutable":  false
+                          },
+                  "nsis":  {
+                               "oneClick":  false,
+                               "allowToChangeInstallationDirectory":  true,
+                               "createDesktopShortcut":  true,
+                               "createStartMenuShortcut":  true,
+                               "installerIcon":  "assets/logo.ico",
+                               "uninstallerIcon":  "assets/logo.ico",
+                               "installerHeaderIcon":  "assets/logo.ico"
+                           }
+              },
+    "keywords":  [
+
+                 ],
+    "author":  "",
+    "license":  "ISC",
+    "devDependencies":  {
+                            "electron":  "^39.2.4",
+                            "electron-builder":  "^26.0.12"
+                        }
 }
