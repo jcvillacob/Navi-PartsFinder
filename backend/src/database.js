@@ -1,14 +1,14 @@
-const { Pool } = require('pg');
-const bcrypt = require('bcryptjs');
+const { Pool } = require("pg");
+const bcrypt = require("bcryptjs");
 const {
   DATABASE_URL,
   DEFAULT_ADMIN_USERNAME,
   DEFAULT_ADMIN_PASSWORD,
   DEFAULT_ADMIN_NAME,
-  DEFAULT_ADMIN_ROLE
-} = require('./config');
+  DEFAULT_ADMIN_ROLE,
+} = require("./config");
 
-console.log('📁 Conectando a PostgreSQL...');
+console.log("📁 Conectando a PostgreSQL...");
 
 const pool = new Pool({
   connectionString: DATABASE_URL,
@@ -45,6 +45,16 @@ async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS part_compatibilities (
           id SERIAL PRIMARY KEY,
           part_id INTEGER NOT NULL REFERENCES parts(id) ON DELETE CASCADE,
+          description TEXT NOT NULL,
+          response_brand TEXT DEFAULT 'Navitrans',
+          image_url TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Tabla de Compatibilidades
+      CREATE TABLE IF NOT EXISTS part_compatibilities (
+          id SERIAL PRIMARY KEY,
+          part_id INTEGER NOT NULL REFERENCES parts(id) ON DELETE CASCADE,
           compatible_part_number TEXT NOT NULL,
           equipment_model TEXT NOT NULL,
           original_brand TEXT NOT NULL,
@@ -59,6 +69,17 @@ async function initializeDatabase() {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
+      -- Tabla de Logs de Actividad
+      CREATE TABLE IF NOT EXISTS activity_logs (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER REFERENCES users(id),
+          username TEXT,
+          action_type TEXT NOT NULL CHECK (action_type IN ('LOGIN', 'SEARCH', 'UPLOAD')),
+          details JSONB,
+          ip_address TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
       -- ÍNDICES para búsqueda rápida
       CREATE INDEX IF NOT EXISTS idx_parts_number ON parts(part_number);
       CREATE INDEX IF NOT EXISTS idx_compat_number ON part_compatibilities(compatible_part_number);
@@ -66,8 +87,8 @@ async function initializeDatabase() {
 
     // Crear usuario admin por defecto si no existe
     const existingAdmin = await client.query(
-      'SELECT id FROM users WHERE username = $1',
-      [DEFAULT_ADMIN_USERNAME]
+      "SELECT id FROM users WHERE username = $1",
+      [DEFAULT_ADMIN_USERNAME],
     );
 
     if (existingAdmin.rows.length === 0) {
@@ -75,7 +96,12 @@ async function initializeDatabase() {
       await client.query(
         `INSERT INTO users (username, password_hash, role, name)
          VALUES ($1, $2, $3, $4)`,
-        [DEFAULT_ADMIN_USERNAME, passwordHash, DEFAULT_ADMIN_ROLE, DEFAULT_ADMIN_NAME]
+        [
+          DEFAULT_ADMIN_USERNAME,
+          passwordHash,
+          DEFAULT_ADMIN_ROLE,
+          DEFAULT_ADMIN_NAME,
+        ],
       );
     }
 
@@ -96,7 +122,7 @@ async function initializeDatabase() {
       LEFT JOIN part_compatibilities pc ON p.id = pc.part_id
     `);
 
-    console.log('✅ Base de datos PostgreSQL inicializada');
+    console.log("✅ Base de datos PostgreSQL inicializada");
   } finally {
     client.release();
   }
@@ -130,7 +156,7 @@ const db = {
   },
 
   // Inicializar
-  initialize: initializeDatabase
+  initialize: initializeDatabase,
 };
 
 module.exports = db;

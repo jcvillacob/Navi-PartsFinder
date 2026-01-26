@@ -37,7 +37,9 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const extname = allowedTypes.test(
+      path.extname(file.originalname).toLowerCase(),
+    );
     const mimetype = allowedTypes.test(file.mimetype);
     if (extname && mimetype) {
       cb(null, true);
@@ -49,18 +51,35 @@ const upload = multer({
 
 const ALLOWED_ROLES = ["admin", "importer", "viewer"];
 
+// Función helper para registrar logs
+async function logActivity(userId, username, actionType, details, req) {
+  try {
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    await db.run(
+      `INSERT INTO activity_logs (user_id, username, action_type, details, ip_address)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [userId, username, actionType, JSON.stringify(details), ipAddress],
+    );
+  } catch (error) {
+    console.error("Error al registrar actividad:", error);
+    // No fallamos la request principal si el log falla
+  }
+}
+
 // Autenticacion
 app.post("/api/auth/login", async (req, res) => {
   try {
     const { username, password } = req.body || {};
 
     if (!username || !password) {
-      return res.status(400).json({ error: "username y password son requeridos" });
+      return res
+        .status(400)
+        .json({ error: "username y password son requeridos" });
     }
 
     const user = await db.get(
       "SELECT id, username, password_hash, role, name FROM users WHERE username = $1",
-      [username]
+      [username],
     );
 
     if (!user) {
@@ -73,10 +92,18 @@ app.post("/api/auth/login", async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role, name: user.name },
+      {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        name: user.name,
+      },
       JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
+      { expiresIn: JWT_EXPIRES_IN },
     );
+
+    // Registrar Login Exitoso de forma asíncrona
+    logActivity(user.id, user.username, "LOGIN", { success: true }, req);
 
     return res.json({
       token,
@@ -105,7 +132,7 @@ app.get("/api/auth/me", requireAuth, (req, res) => {
 app.get("/api/users", requireAuth, requireRole(["admin"]), async (req, res) => {
   try {
     const users = await db.all(
-      "SELECT id, username, role, name, created_at, updated_at FROM users ORDER BY id"
+      "SELECT id, username, role, name, created_at, updated_at FROM users ORDER BY id",
     );
     res.json(users);
   } catch (error) {
@@ -113,95 +140,110 @@ app.get("/api/users", requireAuth, requireRole(["admin"]), async (req, res) => {
   }
 });
 
-app.post("/api/users", requireAuth, requireRole(["admin"]), async (req, res) => {
-  try {
-    const { username, password, role, name } = req.body || {};
+app.post(
+  "/api/users",
+  requireAuth,
+  requireRole(["admin"]),
+  async (req, res) => {
+    try {
+      const { username, password, role, name } = req.body || {};
 
-    if (!username || !password || !role || !name) {
-      return res.status(400).json({ error: "username, password, role y name son requeridos" });
-    }
+      if (!username || !password || !role || !name) {
+        return res
+          .status(400)
+          .json({ error: "username, password, role y name son requeridos" });
+      }
 
-    if (!ALLOWED_ROLES.includes(role)) {
-      return res.status(400).json({ error: "Rol no valido" });
-    }
+      if (!ALLOWED_ROLES.includes(role)) {
+        return res.status(400).json({ error: "Rol no valido" });
+      }
 
-    const existing = await db.get("SELECT id FROM users WHERE username = $1", [username]);
-    if (existing) {
-      return res.status(409).json({ error: "Usuario ya existe" });
-    }
+      const existing = await db.get(
+        "SELECT id FROM users WHERE username = $1",
+        [username],
+      );
+      if (existing) {
+        return res.status(409).json({ error: "Usuario ya existe" });
+      }
 
-    const passwordHash = await bcrypt.hash(password, 10);
-    const result = await db.run(
-      `INSERT INTO users (username, password_hash, role, name)
+      const passwordHash = await bcrypt.hash(password, 10);
+      const result = await db.run(
+        `INSERT INTO users (username, password_hash, role, name)
        VALUES ($1, $2, $3, $4)
        RETURNING id`,
-      [username, passwordHash, role, name]
-    );
+        [username, passwordHash, role, name],
+      );
 
-    return res.status(201).json({ id: result.lastID });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
-});
-
-app.put("/api/users/:id", requireAuth, requireRole(["admin"]), async (req, res) => {
-  try {
-    const userId = parseInt(req.params.id, 10);
-    const { username, password, role, name } = req.body || {};
-
-    if (!userId) {
-      return res.status(400).json({ error: "Id invalido" });
+      return res.status(201).json({ id: result.lastID });
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
     }
+  },
+);
 
-    if (role && !ALLOWED_ROLES.includes(role)) {
-      return res.status(400).json({ error: "Rol no valido" });
+app.put(
+  "/api/users/:id",
+  requireAuth,
+  requireRole(["admin"]),
+  async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id, 10);
+      const { username, password, role, name } = req.body || {};
+
+      if (!userId) {
+        return res.status(400).json({ error: "Id invalido" });
+      }
+
+      if (role && !ALLOWED_ROLES.includes(role)) {
+        return res.status(400).json({ error: "Rol no valido" });
+      }
+
+      const updates = [];
+      const params = [];
+      let idx = 1;
+
+      if (username) {
+        updates.push(`username = $${idx++}`);
+        params.push(username);
+      }
+
+      if (name) {
+        updates.push(`name = $${idx++}`);
+        params.push(name);
+      }
+
+      if (role) {
+        updates.push(`role = $${idx++}`);
+        params.push(role);
+      }
+
+      if (password) {
+        const passwordHash = await bcrypt.hash(password, 10);
+        updates.push(`password_hash = $${idx++}`);
+        params.push(passwordHash);
+      }
+
+      if (updates.length === 0) {
+        return res.status(400).json({ error: "No hay campos para actualizar" });
+      }
+
+      updates.push(`updated_at = CURRENT_TIMESTAMP`);
+      params.push(userId);
+
+      await db.run(
+        `UPDATE users SET ${updates.join(", ")} WHERE id = $${idx}`,
+        params,
+      );
+
+      return res.json({ ok: true });
+    } catch (error) {
+      if (error.code === "23505") {
+        return res.status(409).json({ error: "Usuario ya existe" });
+      }
+      return res.status(500).json({ error: error.message });
     }
-
-    const updates = [];
-    const params = [];
-    let idx = 1;
-
-    if (username) {
-      updates.push(`username = $${idx++}`);
-      params.push(username);
-    }
-
-    if (name) {
-      updates.push(`name = $${idx++}`);
-      params.push(name);
-    }
-
-    if (role) {
-      updates.push(`role = $${idx++}`);
-      params.push(role);
-    }
-
-    if (password) {
-      const passwordHash = await bcrypt.hash(password, 10);
-      updates.push(`password_hash = $${idx++}`);
-      params.push(passwordHash);
-    }
-
-    if (updates.length === 0) {
-      return res.status(400).json({ error: "No hay campos para actualizar" });
-    }
-
-    updates.push(`updated_at = CURRENT_TIMESTAMP`);
-    params.push(userId);
-
-    await db.run(
-      `UPDATE users SET ${updates.join(", ")} WHERE id = $${idx}`,
-      params
-    );
-
-    return res.json({ ok: true });
-  } catch (error) {
-    if (error.code === "23505") {
-      return res.status(409).json({ error: "Usuario ya existe" });
-    }
-    return res.status(500).json({ error: error.message });
-  }
-});
+  },
+);
 // Endpoint de búsqueda
 app.get("/api/search", requireAuth, async (req, res) => {
   try {
@@ -217,7 +259,7 @@ app.get("/api/search", requireAuth, async (req, res) => {
          WHERE part_number ILIKE $1
          OR compatible_part_number ILIKE $1
          OR equipment_model ILIKE $1`,
-        [searchPattern]
+        [searchPattern],
       );
 
       if (matchingParts.length === 0) {
@@ -252,7 +294,7 @@ app.get("/api/search", requireAuth, async (req, res) => {
       compatibilities = await db.all(recursiveQuery, partNumbers);
     } else {
       compatibilities = await db.all(
-        "SELECT * FROM v_parts_search ORDER BY part_number"
+        "SELECT * FROM v_parts_search ORDER BY part_number",
       );
     }
 
@@ -266,6 +308,17 @@ app.get("/api/search", requireAuth, async (req, res) => {
     }));
 
     res.json(mapped);
+
+    // Registrar Búsqueda
+    if (searchQuery && req.user) {
+      logActivity(
+        req.user.id,
+        req.user.username,
+        "SEARCH",
+        { query: searchQuery, resultsCount: mapped.length },
+        req,
+      );
+    }
   } catch (error) {
     console.error("Error en búsqueda:", error);
     res.status(500).json({ error: error.message });
@@ -277,10 +330,9 @@ app.get("/api/parts/:partNumber", requireAuth, async (req, res) => {
   try {
     const { partNumber } = req.params;
 
-    let part = await db.get(
-      "SELECT * FROM parts WHERE part_number = $1",
-      [partNumber]
-    );
+    let part = await db.get("SELECT * FROM parts WHERE part_number = $1", [
+      partNumber,
+    ]);
 
     if (!part) {
       part = await db.get(
@@ -289,7 +341,7 @@ app.get("/api/parts/:partNumber", requireAuth, async (req, res) => {
          JOIN part_compatibilities pc ON p.id = pc.part_id
          WHERE pc.compatible_part_number = $1
          LIMIT 1`,
-        [partNumber]
+        [partNumber],
       );
     }
 
@@ -302,7 +354,7 @@ app.get("/api/parts/:partNumber", requireAuth, async (req, res) => {
          WHERE p.part_number ILIKE $1
          OR pc.compatible_part_number ILIKE $1
          LIMIT 1`,
-        [searchPattern]
+        [searchPattern],
       );
     }
 
@@ -342,7 +394,7 @@ app.get("/api/suggestions", requireAuth, async (req, res) => {
        FROM parts
        WHERE part_number ILIKE $1
        LIMIT 5`,
-      [searchPattern]
+      [searchPattern],
     );
 
     partNumbers.forEach((p) => {
@@ -362,7 +414,7 @@ app.get("/api/suggestions", requireAuth, async (req, res) => {
        JOIN parts p ON pc.part_id = p.id
        WHERE pc.compatible_part_number ILIKE $1
        LIMIT 5`,
-      [searchPattern]
+      [searchPattern],
     );
 
     compatibleParts.forEach((c) => {
@@ -382,7 +434,7 @@ app.get("/api/suggestions", requireAuth, async (req, res) => {
        JOIN parts p ON pc.part_id = p.id
        WHERE pc.equipment_model ILIKE $1
        LIMIT 5`,
-      [searchPattern]
+      [searchPattern],
     );
 
     equipment.forEach((e) => {
@@ -404,73 +456,93 @@ app.get("/api/suggestions", requireAuth, async (req, res) => {
 });
 
 // Importar compatibilidades
-app.post("/api/compatibilities/import", requireAuth, requireRole(["admin", "importer"]), async (req, res) => {
-  try {
-    const items = req.body;
-    if (!Array.isArray(items)) {
-      return res.status(400).json({ error: "Se esperaba un array de items" });
-    }
-
-    let newParts = 0;
-    let updatedParts = 0;
-    let newCompatibilities = 0;
-
-    for (const item of items) {
-      const partNumber = item.partNumber || "NAV81N6-26601";
-      const description = item.description || "CADENA (SIN ZAPATAS)";
-
-      const existingPart = await db.get(
-        "SELECT id FROM parts WHERE part_number = $1",
-        [partNumber]
-      );
-
-      if (existingPart) {
-        await db.run(
-          `UPDATE parts SET description = $1, response_brand = $2 WHERE part_number = $3`,
-          [description, item.spareBrand || "Navitrans", partNumber]
-        );
-        updatedParts++;
-      } else {
-        await db.run(
-          `INSERT INTO parts (part_number, description, response_brand)
-           VALUES ($1, $2, $3)`,
-          [partNumber, description, item.spareBrand || "Navitrans"]
-        );
-        newParts++;
+app.post(
+  "/api/compatibilities/import",
+  requireAuth,
+  requireRole(["admin", "importer"]),
+  async (req, res) => {
+    try {
+      const items = req.body;
+      if (!Array.isArray(items)) {
+        return res.status(400).json({ error: "Se esperaba un array de items" });
       }
 
-      const part = await db.get(
-        "SELECT id FROM parts WHERE part_number = $1",
-        [partNumber]
-      );
+      let newParts = 0;
+      let updatedParts = 0;
+      let newCompatibilities = 0;
 
-      if (part) {
-        const existingCompat = await db.get(
-          `SELECT id FROM part_compatibilities
-           WHERE part_id = $1 AND compatible_part_number = $2`,
-          [part.id, item.compatiblePart]
+      for (const item of items) {
+        const partNumber = item.partNumber || "NAV81N6-26601";
+        const description = item.description || "CADENA (SIN ZAPATAS)";
+
+        const existingPart = await db.get(
+          "SELECT id FROM parts WHERE part_number = $1",
+          [partNumber],
         );
 
-        if (!existingCompat) {
+        if (existingPart) {
           await db.run(
-            `INSERT INTO part_compatibilities (part_id, compatible_part_number, equipment_model, original_brand)
-             VALUES ($1, $2, $3, $4)`,
-            [part.id, item.compatiblePart, item.equipment, item.brand]
+            `UPDATE parts SET description = $1, response_brand = $2 WHERE part_number = $3`,
+            [description, item.spareBrand || "Navitrans", partNumber],
           );
-          newCompatibilities++;
+          updatedParts++;
+        } else {
+          await db.run(
+            `INSERT INTO parts (part_number, description, response_brand)
+           VALUES ($1, $2, $3)`,
+            [partNumber, description, item.spareBrand || "Navitrans"],
+          );
+          newParts++;
+        }
+
+        const part = await db.get(
+          "SELECT id FROM parts WHERE part_number = $1",
+          [partNumber],
+        );
+
+        if (part) {
+          const existingCompat = await db.get(
+            `SELECT id FROM part_compatibilities
+           WHERE part_id = $1 AND compatible_part_number = $2`,
+            [part.id, item.compatiblePart],
+          );
+
+          if (!existingCompat) {
+            await db.run(
+              `INSERT INTO part_compatibilities (part_id, compatible_part_number, equipment_model, original_brand)
+             VALUES ($1, $2, $3, $4)`,
+              [part.id, item.compatiblePart, item.equipment, item.brand],
+            );
+            newCompatibilities++;
+          }
         }
       }
-    }
 
-    res.status(201).json({
-      message: `Importados ${items.length} registros`,
-      stats: { newParts, updatedParts, newCompatibilities },
-    });
-  } catch (error) {
-    console.error("Error en importación:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
+      res.status(201).json({
+        message: `Importados ${items.length} registros`,
+        stats: { newParts, updatedParts, newCompatibilities },
+      });
+
+      // Registrar Importación
+      if (req.user) {
+        logActivity(
+          req.user.id,
+          req.user.username,
+          "UPLOAD",
+          {
+            type: "IMPORT_BATCH",
+            count: items.length,
+            stats: { newParts, updatedParts, newCompatibilities },
+          },
+          req,
+        );
+      }
+    } catch (error) {
+      console.error("Error en importación:", error);
+      res.status(500).json({ error: error.message });
+    }
+  },
+);
 
 // Obtener detalle de inventario
 app.get("/api/inventory/:partNumber", requireAuth, async (req, res) => {
@@ -485,39 +557,61 @@ app.get("/api/inventory/:partNumber", requireAuth, async (req, res) => {
 });
 
 // Subir imagen para una parte
-app.post("/api/parts/:partNumber/image", requireAuth, requireRole(["admin", "importer"]), upload.single("image"), async (req, res) => {
-  try {
-    const { partNumber } = req.params;
+app.post(
+  "/api/parts/:partNumber/image",
+  requireAuth,
+  requireRole(["admin", "importer"]),
+  upload.single("image"),
+  async (req, res) => {
+    try {
+      const { partNumber } = req.params;
 
-    if (!req.file) {
-      return res.status(400).json({ error: "No se proporcionó ninguna imagen" });
+      if (!req.file) {
+        return res
+          .status(400)
+          .json({ error: "No se proporcionó ninguna imagen" });
+      }
+
+      const part = await db.get("SELECT id FROM parts WHERE part_number = $1", [
+        partNumber,
+      ]);
+
+      if (!part) {
+        fs.unlinkSync(req.file.path);
+        return res.status(404).json({ error: "Parte no encontrada" });
+      }
+
+      const imageUrl = `/uploads/${req.file.filename}`;
+      await db.run("UPDATE parts SET image_url = $1 WHERE part_number = $2", [
+        imageUrl,
+        partNumber,
+      ]);
+
+      res.json({
+        message: "Imagen subida correctamente",
+        imageUrl,
+        filename: req.file.filename,
+      });
+
+      // Registrar Subida de Imagen
+      if (req.user) {
+        logActivity(
+          req.user.id,
+          req.user.username,
+          "UPLOAD",
+          {
+            type: "IMAGE_UPLOAD",
+            partNumber: partNumber,
+            filename: req.file.filename,
+          },
+          req,
+        );
+      }
+    } catch (error) {
+      res.status(500).json({ error: error.message });
     }
-
-    const part = await db.get(
-      "SELECT id FROM parts WHERE part_number = $1",
-      [partNumber]
-    );
-
-    if (!part) {
-      fs.unlinkSync(req.file.path);
-      return res.status(404).json({ error: "Parte no encontrada" });
-    }
-
-    const imageUrl = `/uploads/${req.file.filename}`;
-    await db.run(
-      "UPDATE parts SET image_url = $1 WHERE part_number = $2",
-      [imageUrl, partNumber]
-    );
-
-    res.json({
-      message: "Imagen subida correctamente",
-      imageUrl,
-      filename: req.file.filename,
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+  },
+);
 
 // Health check
 app.get("/api/health", (req, res) => {
@@ -542,7 +636,3 @@ async function startServer() {
 }
 
 startServer();
-
-
-
-
