@@ -1,22 +1,24 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "Backend API para buscador de equivalencias",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "Navitrans",
   "license": "ISC",
   "dependencies": {
-    "better-sqlite3": "^12.4.6",
+    "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
     "mssql": "^12.2.0",
-    "multer": "^2.0.2"
+    "multer": "^2.0.2",
+    "pg": "^8.11.3"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"

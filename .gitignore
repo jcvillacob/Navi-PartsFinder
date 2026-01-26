@@ -6,21 +6,24 @@ backend/node_modules/
 # Build
 dist/
 frontend/dist/
+frontend/.angular/
 
-# Base de datos
-data/*.db
-data/*.db-journal
+# Base de datos PostgreSQL (Docker)
+database-data/
+
+# Uploads
+uploads/
 
 # Logs
 *.log
-backend.log
 
 # Environment
+.env
 .env.local
 
 # IDE
 .idea/
 .vscode/
 
+# Documentación privada
 Documentacion_Tecnica_Inventario_Navitrans.md
-.env

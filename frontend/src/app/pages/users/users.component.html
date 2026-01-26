@@ -1,0 +1,164 @@
+<div class="min-h-screen bg-slate-900 text-white">
+  <div class="max-w-6xl mx-auto px-6 py-8">
+    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+      <div>
+        <h1 class="text-2xl font-bold">Usuarios</h1>
+        <p class="text-slate-400 text-sm">Gestiona accesos y roles</p>
+      </div>
+      <a
+        routerLink="/catalog"
+        class="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm hover:bg-slate-700">
+        Volver al catalogo
+      </a>
+    </div>
+
+    <div *ngIf="errorMessage" class="mb-4 text-sm text-red-300 bg-red-900/30 border border-red-700 rounded-lg px-3 py-2">
+      {{ errorMessage }}
+    </div>
+    <div *ngIf="successMessage" class="mb-4 text-sm text-green-300 bg-green-900/30 border border-green-700 rounded-lg px-3 py-2">
+      {{ successMessage }}
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-6">
+        <h2 class="text-lg font-semibold mb-4">Crear usuario</h2>
+        <form (ngSubmit)="createUser()" class="space-y-4">
+          <div>
+            <label class="block text-sm text-slate-300 mb-1">Usuario</label>
+            <input
+              type="text"
+              [(ngModel)]="newUser.username"
+              name="newUsername"
+              class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-white"
+            />
+          </div>
+          <div>
+            <label class="block text-sm text-slate-300 mb-1">Nombre</label>
+            <input
+              type="text"
+              [(ngModel)]="newUser.name"
+              name="newName"
+              class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-white"
+            />
+          </div>
+          <div>
+            <label class="block text-sm text-slate-300 mb-1">Rol</label>
+            <select
+              [(ngModel)]="newUser.role"
+              name="newRole"
+              class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-white">
+              <option *ngFor="let role of roleOptions" [value]="role">{{ role }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm text-slate-300 mb-1">Contrasena</label>
+            <input
+              type="password"
+              [(ngModel)]="newUser.password"
+              name="newPassword"
+              class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-white"
+            />
+          </div>
+          <button
+            type="submit"
+            class="w-full rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white py-2 font-medium">
+            Crear usuario
+          </button>
+        </form>
+      </div>
+
+      <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-6">
+        <h2 class="text-lg font-semibold mb-4">Editar usuario</h2>
+        <div *ngIf="!selectedUser" class="text-sm text-slate-400">
+          Selecciona un usuario de la lista para editarlo.
+        </div>
+
+        <form *ngIf="selectedUser" (ngSubmit)="saveEdit()" class="space-y-4">
+          <div class="text-sm text-slate-400">ID: {{ selectedUser.id }}</div>
+          <div>
+            <label class="block text-sm text-slate-300 mb-1">Usuario</label>
+            <input
+              type="text"
+              [(ngModel)]="editForm.username"
+              name="editUsername"
+              class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-white"
+            />
+          </div>
+          <div>
+            <label class="block text-sm text-slate-300 mb-1">Nombre</label>
+            <input
+              type="text"
+              [(ngModel)]="editForm.name"
+              name="editName"
+              class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-white"
+            />
+          </div>
+          <div>
+            <label class="block text-sm text-slate-300 mb-1">Rol</label>
+            <select
+              [(ngModel)]="editForm.role"
+              name="editRole"
+              class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-white">
+              <option *ngFor="let role of roleOptions" [value]="role">{{ role }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm text-slate-300 mb-1">Nueva contrasena (opcional)</label>
+            <input
+              type="password"
+              [(ngModel)]="editForm.password"
+              name="editPassword"
+              class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-white"
+            />
+          </div>
+          <div class="flex gap-3">
+            <button
+              type="submit"
+              class="flex-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white py-2 font-medium">
+              Guardar cambios
+            </button>
+            <button
+              type="button"
+              (click)="cancelEdit()"
+              class="flex-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-white py-2 font-medium">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="mt-8 bg-slate-800/80 border border-slate-700 rounded-2xl p-6">
+      <h2 class="text-lg font-semibold mb-4">Lista de usuarios</h2>
+      <div *ngIf="isLoading" class="text-sm text-slate-400">Cargando usuarios...</div>
+      <div class="overflow-auto">
+        <table class="min-w-full text-sm">
+          <thead>
+            <tr class="text-left text-slate-400">
+              <th class="py-2">ID</th>
+              <th class="py-2">Usuario</th>
+              <th class="py-2">Nombre</th>
+              <th class="py-2">Rol</th>
+              <th class="py-2">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let user of users" class="border-t border-slate-700">
+              <td class="py-2">{{ user.id }}</td>
+              <td class="py-2">{{ user.username }}</td>
+              <td class="py-2">{{ user.name }}</td>
+              <td class="py-2">{{ user.role }}</td>
+              <td class="py-2">
+                <button
+                  class="px-3 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-white"
+                  (click)="startEdit(user)">
+                  Editar
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

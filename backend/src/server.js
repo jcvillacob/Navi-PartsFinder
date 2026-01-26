@@ -2,10 +2,12 @@ const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
 const fs = require("fs");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const db = require("./database");
-const { PUERTOS } = require("./config");
-const net = require("net");
+const { PORT, JWT_SECRET, JWT_EXPIRES_IN } = require("./config");
 const path = require("path");
+const { requireAuth, requireRole } = require("./middleware/auth");
 
 const app = express();
 
@@ -32,7 +34,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -45,20 +47,163 @@ const upload = multer({
   },
 });
 
-// Asegurar que la columna image_url existe en la tabla parts
-try {
-  const tableInfo = db.prepare("PRAGMA table_info(parts)").all();
-  const hasImageUrl = tableInfo.some(col => col.name === "image_url");
-  if (!hasImageUrl) {
-    db.prepare("ALTER TABLE parts ADD COLUMN image_url TEXT").run();
-    console.log("✅ Columna image_url agregada a la tabla parts");
-  }
-} catch (err) {
-  console.error("Error verificando columna image_url:", err.message);
-}
+const ALLOWED_ROLES = ["admin", "importer", "viewer"];
 
+// Autenticacion
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+
+    if (!username || !password) {
+      return res.status(400).json({ error: "username y password son requeridos" });
+    }
+
+    const user = await db.get(
+      "SELECT id, username, password_hash, role, name FROM users WHERE username = $1",
+      [username]
+    );
+
+    if (!user) {
+      return res.status(401).json({ error: "Credenciales invalidas" });
+    }
+
+    const isValid = await bcrypt.compare(password, user.password_hash);
+    if (!isValid) {
+      return res.status(401).json({ error: "Credenciales invalidas" });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, username: user.username, role: user.role, name: user.name },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
+
+    return res.json({
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        name: user.name,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/auth/me", requireAuth, (req, res) => {
+  res.json({
+    id: req.user.id,
+    username: req.user.username,
+    role: req.user.role,
+    name: req.user.name,
+  });
+});
+
+// Usuarios (solo admin)
+app.get("/api/users", requireAuth, requireRole(["admin"]), async (req, res) => {
+  try {
+    const users = await db.all(
+      "SELECT id, username, role, name, created_at, updated_at FROM users ORDER BY id"
+    );
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/users", requireAuth, requireRole(["admin"]), async (req, res) => {
+  try {
+    const { username, password, role, name } = req.body || {};
+
+    if (!username || !password || !role || !name) {
+      return res.status(400).json({ error: "username, password, role y name son requeridos" });
+    }
+
+    if (!ALLOWED_ROLES.includes(role)) {
+      return res.status(400).json({ error: "Rol no valido" });
+    }
+
+    const existing = await db.get("SELECT id FROM users WHERE username = $1", [username]);
+    if (existing) {
+      return res.status(409).json({ error: "Usuario ya existe" });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const result = await db.run(
+      `INSERT INTO users (username, password_hash, role, name)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id`,
+      [username, passwordHash, role, name]
+    );
+
+    return res.status(201).json({ id: result.lastID });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.put("/api/users/:id", requireAuth, requireRole(["admin"]), async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id, 10);
+    const { username, password, role, name } = req.body || {};
+
+    if (!userId) {
+      return res.status(400).json({ error: "Id invalido" });
+    }
+
+    if (role && !ALLOWED_ROLES.includes(role)) {
+      return res.status(400).json({ error: "Rol no valido" });
+    }
+
+    const updates = [];
+    const params = [];
+    let idx = 1;
+
+    if (username) {
+      updates.push(`username = $${idx++}`);
+      params.push(username);
+    }
+
+    if (name) {
+      updates.push(`name = $${idx++}`);
+      params.push(name);
+    }
+
+    if (role) {
+      updates.push(`role = $${idx++}`);
+      params.push(role);
+    }
+
+    if (password) {
+      const passwordHash = await bcrypt.hash(password, 10);
+      updates.push(`password_hash = $${idx++}`);
+      params.push(passwordHash);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: "No hay campos para actualizar" });
+    }
+
+    updates.push(`updated_at = CURRENT_TIMESTAMP`);
+    params.push(userId);
+
+    await db.run(
+      `UPDATE users SET ${updates.join(", ")} WHERE id = $${idx}`,
+      params
+    );
+
+    return res.json({ ok: true });
+  } catch (error) {
+    if (error.code === "23505") {
+      return res.status(409).json({ error: "Usuario ya existe" });
+    }
+    return res.status(500).json({ error: error.message });
+  }
+});
 // Endpoint de búsqueda
-app.get("/api/search", async (req, res) => {
+app.get("/api/search", requireAuth, async (req, res) => {
   try {
     const searchQuery = req.query.q;
     let compatibilities;
@@ -66,54 +211,51 @@ app.get("/api/search", async (req, res) => {
     if (searchQuery) {
       const searchPattern = `%${searchQuery}%`;
 
-      const matchingParts = db
-        .prepare(
-          `
-        SELECT DISTINCT part_number 
-        FROM v_parts_search 
-        WHERE part_number LIKE ? 
-        OR compatible_part_number LIKE ?
-        OR equipment_model LIKE ?
-      `
-        )
-        .all(searchPattern, searchPattern, searchPattern);
+      const matchingParts = await db.all(
+        `SELECT DISTINCT part_number
+         FROM v_parts_search
+         WHERE part_number ILIKE $1
+         OR compatible_part_number ILIKE $1
+         OR equipment_model ILIKE $1`,
+        [searchPattern]
+      );
 
       if (matchingParts.length === 0) {
         return res.json([]);
       }
 
       const partNumbers = [...new Set(matchingParts.map((p) => p.part_number))];
-      const placeholders = partNumbers.map(() => "?").join(",");
+
+      // Crear placeholders para PostgreSQL ($1, $2, $3...)
+      const placeholders = partNumbers.map((_, i) => `$${i + 1}`).join(",");
 
       const recursiveQuery = `
         WITH RECURSIVE compatibility_network AS (
           SELECT DISTINCT part_number, 0 as depth
           FROM v_parts_search
           WHERE part_number IN (${placeholders})
-          
+
           UNION
-          
+
           SELECT DISTINCT v.part_number, cn.depth + 1
           FROM v_parts_search v
-          INNER JOIN compatibility_network cn 
+          INNER JOIN compatibility_network cn
             ON v.compatible_part_number = cn.part_number
           WHERE cn.depth < 2
         )
-        SELECT DISTINCT v.* 
+        SELECT DISTINCT v.*
         FROM v_parts_search v
         INNER JOIN compatibility_network cn ON v.part_number = cn.part_number
         ORDER BY v.part_number
       `;
 
-      compatibilities = db.prepare(recursiveQuery).all(...partNumbers);
+      compatibilities = await db.all(recursiveQuery, partNumbers);
     } else {
-      const stmt = db.prepare(
+      compatibilities = await db.all(
         "SELECT * FROM v_parts_search ORDER BY part_number"
       );
-      compatibilities = stmt.all();
     }
 
-    // Mapeo de compatibilidades
     const mapped = compatibilities.map((c) => ({
       partNumber: c.part_number,
       description: c.description,
@@ -125,54 +267,43 @@ app.get("/api/search", async (req, res) => {
 
     res.json(mapped);
   } catch (error) {
+    console.error("Error en búsqueda:", error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Obtener detalles de una parte (busca por part_number o por referencia compatible)
-app.get("/api/parts/:partNumber", (req, res) => {
+// Obtener detalles de una parte
+app.get("/api/parts/:partNumber", requireAuth, async (req, res) => {
   try {
     const { partNumber } = req.params;
 
-    // Primero buscar directamente por part_number
-    let part = db
-      .prepare("SELECT * FROM parts WHERE part_number = ?")
-      .get(partNumber);
+    let part = await db.get(
+      "SELECT * FROM parts WHERE part_number = $1",
+      [partNumber]
+    );
 
-    // Si no se encuentra, buscar si es una referencia compatible
     if (!part) {
-      const compatibility = db
-        .prepare(`
-          SELECT p.*
-          FROM parts p
-          JOIN part_compatibilities pc ON p.id = pc.part_id
-          WHERE pc.compatible_part_number = ?
-          LIMIT 1
-        `)
-        .get(partNumber);
-
-      if (compatibility) {
-        part = compatibility;
-      }
+      part = await db.get(
+        `SELECT p.*
+         FROM parts p
+         JOIN part_compatibilities pc ON p.id = pc.part_id
+         WHERE pc.compatible_part_number = $1
+         LIMIT 1`,
+        [partNumber]
+      );
     }
 
-    // Si aún no se encuentra, buscar por LIKE en part_number o compatible_part_number
     if (!part) {
       const searchPattern = `%${partNumber}%`;
-      const compatibility = db
-        .prepare(`
-          SELECT DISTINCT p.*
-          FROM parts p
-          LEFT JOIN part_compatibilities pc ON p.id = pc.part_id
-          WHERE p.part_number LIKE ?
-          OR pc.compatible_part_number LIKE ?
-          LIMIT 1
-        `)
-        .get(searchPattern, searchPattern);
-
-      if (compatibility) {
-        part = compatibility;
-      }
+      part = await db.get(
+        `SELECT DISTINCT p.*
+         FROM parts p
+         LEFT JOIN part_compatibilities pc ON p.id = pc.part_id
+         WHERE p.part_number ILIKE $1
+         OR pc.compatible_part_number ILIKE $1
+         LIMIT 1`,
+        [searchPattern]
+      );
     }
 
     if (!part) {
@@ -188,12 +319,13 @@ app.get("/api/parts/:partNumber", (req, res) => {
       imageUrl: part.image_url || null,
     });
   } catch (error) {
+    console.error("Error obteniendo parte:", error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // Obtener sugerencias para autocompletado
-app.get("/api/suggestions", (req, res) => {
+app.get("/api/suggestions", requireAuth, async (req, res) => {
   try {
     const searchQuery = req.query.q;
 
@@ -202,22 +334,16 @@ app.get("/api/suggestions", (req, res) => {
     }
 
     const searchPattern = `%${searchQuery}%`;
-
-    // Buscar en números de parte, partes compatibles y equipos
     const suggestions = [];
     const seen = new Set();
 
-    // Números de parte
-    const partNumbers = db
-      .prepare(
-        `
-      SELECT DISTINCT part_number, description
-      FROM parts
-      WHERE part_number LIKE ?
-      LIMIT 5
-    `
-      )
-      .all(searchPattern);
+    const partNumbers = await db.all(
+      `SELECT DISTINCT part_number, description
+       FROM parts
+       WHERE part_number ILIKE $1
+       LIMIT 5`,
+      [searchPattern]
+    );
 
     partNumbers.forEach((p) => {
       if (!seen.has(p.part_number)) {
@@ -230,18 +356,14 @@ app.get("/api/suggestions", (req, res) => {
       }
     });
 
-    // Partes compatibles
-    const compatibleParts = db
-      .prepare(
-        `
-      SELECT DISTINCT pc.compatible_part_number, pc.equipment_model, p.part_number
-      FROM part_compatibilities pc
-      JOIN parts p ON pc.part_id = p.id
-      WHERE pc.compatible_part_number LIKE ?
-      LIMIT 5
-    `
-      )
-      .all(searchPattern);
+    const compatibleParts = await db.all(
+      `SELECT DISTINCT pc.compatible_part_number, pc.equipment_model, p.part_number
+       FROM part_compatibilities pc
+       JOIN parts p ON pc.part_id = p.id
+       WHERE pc.compatible_part_number ILIKE $1
+       LIMIT 5`,
+      [searchPattern]
+    );
 
     compatibleParts.forEach((c) => {
       if (!seen.has(c.compatible_part_number)) {
@@ -254,18 +376,14 @@ app.get("/api/suggestions", (req, res) => {
       }
     });
 
-    // Equipos
-    const equipment = db
-      .prepare(
-        `
-      SELECT DISTINCT pc.equipment_model, p.part_number, p.description
-      FROM part_compatibilities pc
-      JOIN parts p ON pc.part_id = p.id
-      WHERE pc.equipment_model LIKE ?
-      LIMIT 5
-    `
-      )
-      .all(searchPattern);
+    const equipment = await db.all(
+      `SELECT DISTINCT pc.equipment_model, p.part_number, p.description
+       FROM part_compatibilities pc
+       JOIN parts p ON pc.part_id = p.id
+       WHERE pc.equipment_model ILIKE $1
+       LIMIT 5`,
+      [searchPattern]
+    );
 
     equipment.forEach((e) => {
       if (!seen.has(e.equipment_model)) {
@@ -278,15 +396,15 @@ app.get("/api/suggestions", (req, res) => {
       }
     });
 
-    // Limitar a 10 sugerencias totales
     res.json(suggestions.slice(0, 10));
   } catch (error) {
+    console.error("Error en sugerencias:", error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Importar compatibilidades con estadísticas
-app.post("/api/compatibilities/import", (req, res) => {
+// Importar compatibilidades
+app.post("/api/compatibilities/import", requireAuth, requireRole(["admin", "importer"]), async (req, res) => {
   try {
     const items = req.body;
     if (!Array.isArray(items)) {
@@ -297,89 +415,68 @@ app.post("/api/compatibilities/import", (req, res) => {
     let updatedParts = 0;
     let newCompatibilities = 0;
 
-    const checkPartExists = db.prepare(
-      "SELECT id FROM parts WHERE part_number = ?"
-    );
+    for (const item of items) {
+      const partNumber = item.partNumber || "NAV81N6-26601";
+      const description = item.description || "CADENA (SIN ZAPATAS)";
 
-    const insertPart = db.prepare(`
-      INSERT INTO parts (part_number, description, response_brand)
-      VALUES (@partNumber, @description, @spareBrand)
-      ON CONFLICT(part_number) DO UPDATE SET
-        description = excluded.description,
-        response_brand = excluded.response_brand
-    `);
+      const existingPart = await db.get(
+        "SELECT id FROM parts WHERE part_number = $1",
+        [partNumber]
+      );
 
-    const getPartId = db.prepare("SELECT id FROM parts WHERE part_number = ?");
-    const insertCompat = db.prepare(`
-      INSERT INTO part_compatibilities (part_id, compatible_part_number, equipment_model, original_brand)
-      VALUES (@partId, @compatiblePart, @equipment, @brand)
-    `);
+      if (existingPart) {
+        await db.run(
+          `UPDATE parts SET description = $1, response_brand = $2 WHERE part_number = $3`,
+          [description, item.spareBrand || "Navitrans", partNumber]
+        );
+        updatedParts++;
+      } else {
+        await db.run(
+          `INSERT INTO parts (part_number, description, response_brand)
+           VALUES ($1, $2, $3)`,
+          [partNumber, description, item.spareBrand || "Navitrans"]
+        );
+        newParts++;
+      }
 
-    const importTransaction = db.transaction((data) => {
-      for (const item of data) {
-        const partNumber = item.partNumber || "NAV81N6-26601";
-        const description = item.description || "CADENA (SIN ZAPATAS)";
+      const part = await db.get(
+        "SELECT id FROM parts WHERE part_number = $1",
+        [partNumber]
+      );
 
-        const existingPart = checkPartExists.get(partNumber);
+      if (part) {
+        const existingCompat = await db.get(
+          `SELECT id FROM part_compatibilities
+           WHERE part_id = $1 AND compatible_part_number = $2`,
+          [part.id, item.compatiblePart]
+        );
 
-        insertPart.run({
-          partNumber: partNumber,
-          description: description,
-          spareBrand: item.spareBrand || "Navitrans",
-        });
-
-        if (existingPart) {
-          updatedParts++;
-        } else {
-          newParts++;
-        }
-
-        const part = getPartId.get(partNumber);
-
-        if (part) {
-          const existingCompat = db
-            .prepare(
-              `
-            SELECT id FROM part_compatibilities 
-            WHERE part_id = ? AND compatible_part_number = ?
-          `
-            )
-            .get(part.id, item.compatiblePart);
-
-          if (!existingCompat) {
-            insertCompat.run({
-              partId: part.id,
-              compatiblePart: item.compatiblePart,
-              equipment: item.equipment,
-              brand: item.brand,
-            });
-            newCompatibilities++;
-          }
+        if (!existingCompat) {
+          await db.run(
+            `INSERT INTO part_compatibilities (part_id, compatible_part_number, equipment_model, original_brand)
+             VALUES ($1, $2, $3, $4)`,
+            [part.id, item.compatiblePart, item.equipment, item.brand]
+          );
+          newCompatibilities++;
         }
       }
-    });
-
-    importTransaction(items);
+    }
 
     res.status(201).json({
       message: `Importados ${items.length} registros`,
-      stats: {
-        newParts,
-        updatedParts,
-        newCompatibilities,
-      },
+      stats: { newParts, updatedParts, newCompatibilities },
     });
   } catch (error) {
+    console.error("Error en importación:", error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Endpoint para obtener detalle de inventario de una pieza
-app.get("/api/inventory/:partNumber", async (req, res) => {
+// Obtener detalle de inventario
+app.get("/api/inventory/:partNumber", requireAuth, async (req, res) => {
   try {
     const { partNumber } = req.params;
     const { getInventoryDetail } = require("./services/inventory.service");
-
     const inventoryDetail = await getInventoryDetail(partNumber);
     res.json(inventoryDetail);
   } catch (error) {
@@ -388,7 +485,7 @@ app.get("/api/inventory/:partNumber", async (req, res) => {
 });
 
 // Subir imagen para una parte
-app.post("/api/parts/:partNumber/image", upload.single("image"), (req, res) => {
+app.post("/api/parts/:partNumber/image", requireAuth, requireRole(["admin", "importer"]), upload.single("image"), async (req, res) => {
   try {
     const { partNumber } = req.params;
 
@@ -396,18 +493,21 @@ app.post("/api/parts/:partNumber/image", upload.single("image"), (req, res) => {
       return res.status(400).json({ error: "No se proporcionó ninguna imagen" });
     }
 
-    // Verificar que la parte existe
-    const part = db.prepare("SELECT id FROM parts WHERE part_number = ?").get(partNumber);
+    const part = await db.get(
+      "SELECT id FROM parts WHERE part_number = $1",
+      [partNumber]
+    );
 
     if (!part) {
-      // Eliminar el archivo subido si la parte no existe
       fs.unlinkSync(req.file.path);
       return res.status(404).json({ error: "Parte no encontrada" });
     }
 
-    // Actualizar la URL de imagen en la base de datos
     const imageUrl = `/uploads/${req.file.filename}`;
-    db.prepare("UPDATE parts SET image_url = ? WHERE part_number = ?").run(imageUrl, partNumber);
+    await db.run(
+      "UPDATE parts SET image_url = $1 WHERE part_number = $2",
+      [imageUrl, partNumber]
+    );
 
     res.json({
       message: "Imagen subida correctamente",
@@ -428,44 +528,21 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// === DETECCIÓN AUTOMÁTICA DE PUERTO ===
-
-function checkPort(port) {
-  return new Promise((resolve) => {
-    const server = net.createServer();
-    server.once("error", () => resolve(false));
-    server.once("listening", () => {
-      server.close();
-      resolve(true);
-    });
-    server.listen(port);
-  });
-}
-
-async function findAvailablePort() {
-  for (const port of PUERTOS) {
-    const available = await checkPort(port);
-    if (available) {
-      return port;
-    }
-    console.log(`⚠️ Puerto ${port} ocupado, intentando siguiente...`);
-  }
-  throw new Error("No hay puertos disponibles");
-}
-
+// Iniciar servidor después de inicializar la base de datos
 async function startServer() {
   try {
-    const port = await findAvailablePort();
-    app.listen(port, () => {
-      console.log(`🚀 Backend corriendo en http://localhost:${port}`);
-      if (process.send) {
-        process.send({ type: "port", port });
-      }
+    await db.initialize();
+    app.listen(PORT, () => {
+      console.log(`🚀 Backend corriendo en http://localhost:${PORT}`);
     });
   } catch (error) {
-    console.error("❌ Error al iniciar servidor:", error.message);
+    console.error("❌ Error al iniciar:", error.message);
     process.exit(1);
   }
 }
 
 startServer();
+
+
+
+

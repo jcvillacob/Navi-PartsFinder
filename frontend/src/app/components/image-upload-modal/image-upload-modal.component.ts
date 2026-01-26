@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule, X, Upload, Image, Check } from 'lucide-angular';
+import { LucideAngularModule, X, Upload, Image, Check, Info } from 'lucide-angular';
 import { PartsService } from '../../services/parts.service';
 
 @Component({
@@ -20,6 +20,7 @@ export class ImageUploadModalComponent {
   readonly Upload = Upload;
   readonly Image = Image;
   readonly Check = Check;
+  readonly Info = Info;
 
   partNumber: string = '';
   selectedFile: File | null = null;

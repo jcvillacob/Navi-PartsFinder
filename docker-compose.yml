@@ -1,0 +1,66 @@
+services:
+  # Base de Datos PostgreSQL
+  db:
+    image: postgres:15
+    container_name: equivalencias_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin123}
+      POSTGRES_DB: ${POSTGRES_DB:-equivalencias}
+    volumes:
+      - ./database-data:/var/lib/postgresql/data
+    networks:
+      - red-equivalencias
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-equivalencias}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Backend (Express.js + PostgreSQL)
+  backend:
+    build: ./backend
+    container_name: equivalencias_backend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgres://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin123}@db:5432/${POSTGRES_DB:-equivalencias}
+      - JWT_SECRET=${JWT_SECRET:-change-me}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-8h}
+      - DEFAULT_ADMIN_USERNAME=${DEFAULT_ADMIN_USERNAME:-admin}
+      - DEFAULT_ADMIN_PASSWORD=${DEFAULT_ADMIN_PASSWORD:-admin123}
+      - DEFAULT_ADMIN_ROLE=${DEFAULT_ADMIN_ROLE:-admin}
+      - DEFAULT_ADMIN_NAME=${DEFAULT_ADMIN_NAME:-adminitrador}
+      - INVENTORY_DB_USER=${INVENTORY_DB_USER}
+      - INVENTORY_DB_PASSWORD=${INVENTORY_DB_PASSWORD}
+      - INVENTORY_DB_SERVER=${INVENTORY_DB_SERVER}
+      - INVENTORY_DB_NAME=${INVENTORY_DB_NAME}
+    volumes:
+      - ./uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - red-equivalencias
+
+  # Frontend (Angular con servidor estático)
+  frontend:
+    build: ./frontend
+    container_name: equivalencias_frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:4000"
+    environment:
+      - API_URL=http://backend:3000
+    depends_on:
+      - backend
+    networks:
+      - red-equivalencias
+
+networks:
+  red-equivalencias:
+    driver: bridge

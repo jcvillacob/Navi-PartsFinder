@@ -1,60 +1,47 @@
-// Configuración centralizada
+// Configuración centralizada para Docker
 const path = require('path');
 const fs = require('fs');
 
 // Cargar .env en desarrollo
-if (process.env.NODE_ENV !== 'production' && !process.env.PORTABLE_MODE) {
+if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 }
 
-// Puertos disponibles
-const PUERTOS = [
-  parseInt(process.env.PORT) || 3000,
-  3001, 3002, 3003, 3004, 3005
-];
+// Puerto del servidor
+const PORT = parseInt(process.env.PORT) || 3000;
 
-function obtenerRutaDB() {
-  let dataPath;
+// URL de la base de datos PostgreSQL
+const DATABASE_URL = process.env.DATABASE_URL || 'postgres://admin:admin123@localhost:5432/equivalencias';
 
-  if (process.env.PORTABLE_MODE === 'true') {
-    const userDataPath = process.env.USER_DATA_PATH;
-    const appPath = process.env.APP_PATH;
+// JWT
+const JWT_SECRET = process.env.JWT_SECRET || 'change-me';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '8h';
 
-    // PRIORIDAD 1: DB junto al ejecutable (modo portable/OneDrive)
-    const localDataPath = appPath ? path.join(appPath, 'data') : null;
-    
-    // PRIORIDAD 2: DB en AppData (instalación normal)
-    const appDataPath = userDataPath ? path.join(userDataPath, 'data') : null;
+// Usuario admin por defecto
+const DEFAULT_ADMIN_USERNAME = process.env.DEFAULT_ADMIN_USERNAME || 'admin';
+const DEFAULT_ADMIN_PASSWORD = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123';
+const DEFAULT_ADMIN_NAME = process.env.DEFAULT_ADMIN_NAME || 'adminitrador';
+const DEFAULT_ADMIN_ROLE = process.env.DEFAULT_ADMIN_ROLE || 'admin';
 
-    if (localDataPath && fs.existsSync(path.join(localDataPath, 'app.db'))) {
-      console.log('🔵 Modo: PORTABLE (DB junto al ejecutable)');
-      dataPath = localDataPath;
-    } else if (localDataPath && fs.existsSync(localDataPath)) {
-      console.log('🟢 Modo: PORTABLE (carpeta data/ detectada)');
-      dataPath = localDataPath;
-    } else if (appDataPath && fs.existsSync(path.join(appDataPath, 'app.db'))) {
-      console.log('🟡 Modo: INSTALADO (DB en AppData)');
-      dataPath = appDataPath;
-    } else if (appDataPath) {
-      console.log('🟢 Modo: INSTALADO (nueva instalación)');
-      dataPath = appDataPath;
-    } else {
-      console.log('🟠 Modo: DESARROLLO');
-      dataPath = path.join(__dirname, '../../data');
-    }
-  } else {
-    console.log('🟠 Modo: DESARROLLO (sin Electron)');
-    dataPath = path.join(__dirname, '../../data');
+// Ruta de uploads
+function obtenerRutaUploads() {
+  const uploadsPath = process.env.UPLOADS_PATH || path.join(__dirname, '../uploads');
+
+  if (!fs.existsSync(uploadsPath)) {
+    fs.mkdirSync(uploadsPath, { recursive: true });
   }
 
-  if (!fs.existsSync(dataPath)) {
-    fs.mkdirSync(dataPath, { recursive: true });
-  }
-
-  return path.join(dataPath, 'app.db');
+  return uploadsPath;
 }
 
 module.exports = {
-  PUERTOS,
-  DB_PATH: obtenerRutaDB()
+  PORT,
+  DATABASE_URL,
+  UPLOADS_PATH: obtenerRutaUploads(),
+  JWT_SECRET,
+  JWT_EXPIRES_IN,
+  DEFAULT_ADMIN_USERNAME,
+  DEFAULT_ADMIN_PASSWORD,
+  DEFAULT_ADMIN_NAME,
+  DEFAULT_ADMIN_ROLE
 };

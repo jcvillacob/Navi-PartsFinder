@@ -3,13 +3,15 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, of, map } from 'rxjs';
 import { Part } from '../models/part.model';
 import { Compatibility } from '../models/compatibility.model';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root',
 })
 export class PartsService {
-  private apiUrl = 'http://localhost:3000/api';
-  private baseUrl = 'http://localhost:3000';
+  // URL directa al backend
+  private apiUrl = environment.apiUrl;
+  private baseUrl = environment.baseUrl;
 
   constructor(private http: HttpClient) {}
 

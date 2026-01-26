@@ -22,11 +22,25 @@
         <!-- Body -->
         <div class="p-6 space-y-6">
 
+            <!-- Info Banner -->
+            <div class="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4">
+                <div class="flex items-start gap-3">
+                    <lucide-icon [img]="Info" [size]="20" class="text-indigo-400 mt-0.5 shrink-0"></lucide-icon>
+                    <div class="text-sm">
+                        <p class="text-indigo-200 font-medium mb-1">¿Cómo funciona?</p>
+                        <p class="text-slate-400">Ingresa el <strong class="text-white">número exacto de la parte</strong> tal como aparece en el sistema. La imagen se asociará automáticamente con esa parte y se mostrará cuando la busques.</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Part Number Input -->
             <div>
-                <label class="block text-sm font-medium text-slate-400 mb-2">Número de Parte</label>
+                <label class="block text-sm font-medium text-slate-400 mb-2">
+                    Número de Parte <span class="text-red-400">*</span>
+                </label>
                 <input type="text" [(ngModel)]="partNumber" placeholder="Ej: NAV81N6-26601"
                     class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all font-mono" />
+                <p class="text-xs text-slate-500 mt-2">Debe coincidir exactamente con el número en el catálogo</p>
             </div>
 
             <!-- Image Upload Area -->

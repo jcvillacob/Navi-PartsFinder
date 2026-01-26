@@ -1,0 +1,155 @@
+<div *ngIf="isOpen" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <!-- Backdrop -->
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" (click)="closeModal()">
+    </div>
+
+    <!-- Modal Content -->
+    <div
+        class="relative bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
+
+        <!-- Header -->
+        <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50 shrink-0">
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <lucide-icon [img]="FileSpreadsheet" [size]="20" class="text-indigo-400"></lucide-icon>
+                Importar Datos de Compatibilidades
+            </h3>
+            <button (click)="closeModal()"
+                class="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-800">
+                <lucide-icon [img]="X" [size]="20"></lucide-icon>
+            </button>
+        </div>
+
+        <!-- Body -->
+        <div class="p-6 space-y-6 overflow-y-auto flex-1">
+
+            <!-- Info Banner -->
+            <div class="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4">
+                <div class="flex items-start gap-3">
+                    <lucide-icon [img]="Info" [size]="20" class="text-indigo-400 mt-0.5 shrink-0"></lucide-icon>
+                    <div class="text-sm">
+                        <p class="text-indigo-200 font-medium mb-1">Formato de archivo</p>
+                        <p class="text-slate-400">Solo se aceptan archivos <strong class="text-white">Excel (.xlsx, .xls)</strong>. La primera fila debe contener los encabezados de las columnas.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Required Columns Section -->
+            <div>
+                <h4 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                    Columnas requeridas en el archivo
+                </h4>
+                <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-800 bg-slate-900/50">
+                                <th class="text-left px-4 py-2 text-slate-400 font-medium">Columna</th>
+                                <th class="text-left px-4 py-2 text-slate-400 font-medium">Descripción</th>
+                                <th class="text-left px-4 py-2 text-slate-400 font-medium">Ejemplo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let col of expectedColumns; let i = index"
+                                class="border-b border-slate-800/50 last:border-0">
+                                <td class="px-4 py-2.5">
+                                    <span class="text-white font-mono text-xs bg-slate-800 px-2 py-1 rounded">{{ col.name }}</span>
+                                    <span *ngIf="col.required" class="text-red-400 ml-1">*</span>
+                                </td>
+                                <td class="px-4 py-2.5 text-slate-400">{{ col.description }}</td>
+                                <td class="px-4 py-2.5 text-slate-500 font-mono text-xs">{{ col.example }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="text-xs text-slate-500 mt-2 flex items-center gap-1">
+                    <span class="text-red-400">*</span> Campos obligatorios
+                </p>
+            </div>
+
+            <!-- Download Template Button -->
+            <div class="flex justify-center">
+                <button (click)="downloadTemplate()"
+                    class="flex items-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-xl transition-all text-sm font-medium group">
+                    <lucide-icon [img]="Download" [size]="18" class="text-indigo-400 group-hover:text-indigo-300"></lucide-icon>
+                    Descargar plantilla de ejemplo
+                </button>
+            </div>
+
+            <!-- File Upload Area -->
+            <div>
+                <h4 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                    Seleccionar archivo
+                </h4>
+
+                <!-- Dropzone -->
+                <div *ngIf="!selectedFile"
+                    class="border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center transition-all cursor-pointer group"
+                    [ngClass]="isDragOver ? 'border-indigo-500 bg-indigo-500/10' : 'border-slate-700 hover:border-slate-600 hover:bg-slate-800/30'"
+                    (dragover)="onDragOver($event)"
+                    (dragleave)="onDragLeave($event)"
+                    (drop)="onDrop($event)"
+                    (click)="fileInput.click()">
+
+                    <input #fileInput type="file" accept=".xlsx,.xls" class="hidden" (change)="onFileSelected($event)" />
+
+                    <div class="w-14 h-14 rounded-full bg-slate-800 flex items-center justify-center mb-4 group-hover:bg-indigo-600 transition-colors"
+                        [ngClass]="{'bg-indigo-600': isDragOver}">
+                        <lucide-icon [img]="Upload" [size]="28"
+                            class="text-slate-400 group-hover:text-white transition-colors"
+                            [ngClass]="{'text-white': isDragOver}"></lucide-icon>
+                    </div>
+                    <p class="text-white font-medium mb-1">Arrastra tu archivo aquí o haz clic para seleccionar</p>
+                    <p class="text-slate-500 text-sm">Archivos Excel (.xlsx, .xls)</p>
+                </div>
+
+                <!-- Selected File -->
+                <div *ngIf="selectedFile"
+                    class="bg-slate-800 border border-slate-700 rounded-xl p-4 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                            <lucide-icon [img]="FileSpreadsheet" [size]="20" class="text-green-400"></lucide-icon>
+                        </div>
+                        <div>
+                            <p class="text-white font-medium text-sm">{{ selectedFile.name }}</p>
+                            <p class="text-slate-500 text-xs">{{ (selectedFile.size / 1024).toFixed(1) }} KB</p>
+                        </div>
+                    </div>
+                    <button (click)="removeFile()"
+                        class="text-slate-400 hover:text-red-400 p-2 rounded-lg hover:bg-slate-700 transition-colors">
+                        <lucide-icon [img]="X" [size]="18"></lucide-icon>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Messages -->
+            <div *ngIf="errorMessage"
+                class="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm flex items-start gap-3">
+                <lucide-icon [img]="AlertCircle" [size]="18" class="shrink-0 mt-0.5"></lucide-icon>
+                <pre class="whitespace-pre-wrap font-sans">{{ errorMessage }}</pre>
+            </div>
+
+            <div *ngIf="successMessage"
+                class="p-4 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 text-sm flex items-start gap-3">
+                <lucide-icon [img]="CheckCircle" [size]="18" class="shrink-0 mt-0.5"></lucide-icon>
+                <span>{{ successMessage }}</span>
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="px-6 py-4 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-3 shrink-0">
+            <button (click)="closeModal()"
+                class="px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors text-sm font-medium">
+                Cancelar
+            </button>
+            <button (click)="processFile()" [disabled]="isProcessing || !selectedFile"
+                class="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white rounded-lg transition-all text-sm font-medium shadow-lg shadow-indigo-600/20 flex items-center gap-2">
+                <span *ngIf="isProcessing"
+                    class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                <lucide-icon *ngIf="!isProcessing" [img]="Upload" [size]="16"></lucide-icon>
+                {{ isProcessing ? 'Importando...' : 'Importar Datos' }}
+            </button>
+        </div>
+    </div>
+</div>

@@ -6,14 +6,15 @@
   
   <!-- Contenedor de la imagen -->
   <div class="flex-grow bg-slate-950 rounded-xl overflow-hidden relative group">
-    <!-- Imagen principal -->
-    <div class="w-full h-full relative cursor-pointer" (click)="toggleZoom()">
-      <img 
-        [src]="selectedImage || part?.imageUrl" 
-        [alt]="part?.description" 
+    <!-- Imagen principal (cuando hay imagen válida) -->
+    <div *ngIf="hasValidImage" class="w-full h-full relative cursor-pointer" (click)="toggleZoom()">
+      <img
+        [src]="selectedImage || part?.imageUrl"
+        [alt]="part?.description"
+        (error)="onImageError()"
         class="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700"
       />
-      
+
       <!-- Icono de zoom al hover -->
       <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 pointer-events-none">
         <div class="bg-black/50 p-3 rounded-full backdrop-blur-sm border border-white/20">
@@ -21,9 +22,24 @@
         </div>
       </div>
     </div>
-    
-    <!-- Overlay gradiente -->
-    <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-90 pointer-events-none"></div>
+
+    <!-- Placeholder cuando no hay imagen -->
+    <div *ngIf="!hasValidImage" class="w-full h-full flex flex-col items-center justify-center p-8 text-center">
+      <div class="w-20 h-20 rounded-full bg-slate-800/50 flex items-center justify-center mb-4 border border-slate-700/50">
+        <lucide-icon [img]="ImageOff" [size]="40" class="text-slate-600"></lucide-icon>
+      </div>
+      <h4 class="text-slate-400 font-medium mb-2">Sin imagen disponible</h4>
+      <p class="text-slate-600 text-sm mb-4 max-w-xs">
+        Esta parte aún no tiene una imagen asociada.
+      </p>
+      <div class="flex items-center gap-2 text-xs text-slate-500 bg-slate-800/30 px-3 py-2 rounded-lg border border-slate-700/30">
+        <lucide-icon [img]="Upload" [size]="14" class="text-indigo-400"></lucide-icon>
+        <span>Usa "Subir Imagen" para agregar una</span>
+      </div>
+    </div>
+
+    <!-- Overlay gradiente (solo cuando hay imagen) -->
+    <div *ngIf="hasValidImage" class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-90 pointer-events-none"></div>
     
     <!-- Info sobre la imagen -->
     <!-- <div class="absolute bottom-0 left-0 right-0 p-6 pointer-events-none">
@@ -45,13 +61,13 @@
   </div>
 
   <!-- Modal de Zoom -->
-  <div *ngIf="isZoomed" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200" (click)="toggleZoom()">
+  <div *ngIf="isZoomed && hasValidImage" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200" (click)="toggleZoom()">
     <button class="absolute top-4 right-4 text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors z-50">
       <lucide-icon [img]="X" [size]="32"></lucide-icon>
     </button>
-    
-    <img 
-      [src]="selectedImage || part?.imageUrl" 
+
+    <img
+      [src]="selectedImage || part?.imageUrl"
       [alt]="part?.description"
       class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-300"
       (click)="$event.stopPropagation()"
