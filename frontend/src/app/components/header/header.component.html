@@ -1,54 +1,65 @@
-<header
-  class="w-full bg-slate-900 border-b border-slate-800 py-4 px-6 mb-8 flex items-center justify-between shadow-lg">
-  <div class="flex items-center gap-3">
-    <div
-      class="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-indigo-500/20 shadow-lg">
-      <lucide-icon [img]="Factory" [size]="24"></lucide-icon>
+<header class="app-header">
+  <div class="header-brand">
+    <div class="brand-mark">
+      <img
+        class="brand-logo"
+        src="https://www.navitrans.com.co/wp-content/uploads/2025/01/logoblanco-navitrans-scaled-2048x569.webp"
+        alt="Navitrans"
+      />
     </div>
-    <div>
-      <h1 class="text-xl font-bold text-white tracking-wide">
-        PARTS<span class="text-indigo-400">FINDER</span> PRO
-      </h1>
-      <p class="text-xs text-slate-500">Sistema de Catálogo Inteligente</p>
+    <div class="brand-text">
+      <span class="brand-title">PartsFinder Pro</span>
+      <span class="brand-subtitle">Sistema de Catalogo Inteligente</span>
     </div>
   </div>
-  <div class="flex items-center gap-4">
-    <button *ngIf="canImport" (click)="openImportModal()"
-      class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm font-medium shadow-lg shadow-indigo-500/20">
-      <lucide-icon [img]="Upload" [size]="18"></lucide-icon>
-      Importar Datos
+
+  <div class="header-tools">
+    <button class="theme-toggle" type="button" (click)="toggleTheme()" [attr.aria-pressed]="theme === 'dark'">
+      <lucide-icon [img]="themeIcon" [size]="18"></lucide-icon>
+      <span class="theme-label">{{ theme === 'dark' ? 'Light' : 'Dark' }}</span>
     </button>
 
-    <button *ngIf="canImport" (click)="openImageUploadModal()"
-      class="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-lg transition-colors text-sm font-medium shadow-lg">
-      <lucide-icon [img]="Image" [size]="18"></lucide-icon>
-      Subir Imagen
-    </button>
-
-    <button *ngIf="canManageUsers" (click)="goToUsers()"
-      class="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-lg transition-colors text-sm font-medium shadow-lg">
-      <lucide-icon [img]="Users" [size]="18"></lucide-icon>
-      Usuarios
-    </button>
-
-    <div class="flex items-center gap-3 text-sm text-slate-300">
-      <div class="text-right">
-        <div class="font-medium text-white">{{ currentUser?.name }}</div>
-        <div class="text-xs text-slate-400">{{ currentUser?.role }}</div>
-      </div>
-      <button (click)="logout()"
-        class="px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-lg transition-colors text-xs font-medium">
-        Cerrar sesion
+    <div class="user-menu" [class.open]="isUserMenuOpen">
+      <button class="user-trigger" type="button" (click)="toggleUserMenu($event)">
+        <lucide-icon [img]="UserIcon" [size]="18"></lucide-icon>
+        <span class="user-name">{{ currentUser?.name || 'Usuario' }}</span>
+        <lucide-icon [img]="ChevronDown" [size]="16"></lucide-icon>
       </button>
+
+      <div class="user-dropdown" *ngIf="isUserMenuOpen">
+        <div class="user-meta">
+          <div class="user-title">{{ currentUser?.name }}</div>
+          <div class="user-role">{{ currentUser?.role }}</div>
+        </div>
+
+        <div class="menu-actions">
+          <button *ngIf="canImport" type="button" (click)="openImportModal()">
+            <lucide-icon [img]="Upload" [size]="16"></lucide-icon>
+            Importar Datos
+          </button>
+          <button *ngIf="canImport" type="button" (click)="openImageUploadModal()">
+            <lucide-icon [img]="Image" [size]="16"></lucide-icon>
+            Subir Imagen
+          </button>
+          <button *ngIf="canManageUsers" type="button" (click)="goToUsers()">
+            <lucide-icon [img]="Users" [size]="16"></lucide-icon>
+            Usuarios
+          </button>
+        </div>
+
+        <button class="logout-button" type="button" (click)="logout()">
+          Cerrar sesion
+        </button>
+      </div>
     </div>
   </div>
 
   <!-- Notification Toast -->
-  <div *ngIf="message" class="fixed bottom-8 right-8 max-w-md rounded-xl shadow-2xl border z-50 p-4 backdrop-blur-sm"
+  <div *ngIf="message" class="notification-toast"
     [ngClass]="{
-         'bg-blue-900/90 border-blue-500 text-blue-100': message.type === 'loading',
-         'bg-green-900/90 border-green-500 text-green-100': message.type === 'success',
-         'bg-red-900/90 border-red-500 text-red-100': message.type === 'error'
+         'notification-info': message.type === 'loading',
+         'notification-success': message.type === 'success',
+         'notification-error': message.type === 'error'
        }">
     <div class="flex items-start gap-3">
       <div *ngIf="message.type === 'loading'" class="flex items-center">

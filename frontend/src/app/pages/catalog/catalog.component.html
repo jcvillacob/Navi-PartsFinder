@@ -1,12 +1,12 @@
-<div class="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-indigo-500 selection:text-white pb-10">
+<div class="min-h-screen bg-[var(--app-bg)] text-[var(--app-text)] font-sans selection:bg-indigo-500 selection:text-white pb-10">
 
   <!-- Header -->
   <app-header></app-header>
 
-  <main class="max-w-[1600px] mx-auto px-8 md:px-12">
+  <main class="max-w-[1600px] mx-auto px-8 md:px-12 mt-8">
 
     <!-- Buscador -->
-    <app-search-bar (search)="onSearch($event)"></app-search-bar>
+    <div class="mt-2"><app-search-bar (search)="onSearch($event)"></app-search-bar></div>
 
     <!-- Loading state -->
     <div *ngIf="isLoading" class="flex flex-col items-center justify-center py-20">
@@ -39,3 +39,4 @@
     (close)="onCloseModal()">
   </app-detail-modal>
 </div>
+

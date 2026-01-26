@@ -1,12 +1,12 @@
 <div
   class="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 backdrop-blur-md relative overflow-hidden group shadow-xl">
   <!-- Efecto decorativo -->
-  <div class="absolute top-0 right-0 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+  <div class="absolute top-0 right-0 w-40 h-40 bg-[var(--secondary)]/12 rounded-full blur-3xl -mr-20 -mt-20"></div>
 
   <div class="flex items-center justify-between mb-6">
     <div class="flex items-center gap-2">
-      <lucide-icon [img]="Info" [size]="20" class="text-indigo-400"></lucide-icon>
-      <h2 class="text-sm font-bold text-indigo-200 uppercase tracking-wider">Información General</h2>
+      <lucide-icon [img]="Info" [size]="20" class="text-[var(--text-light)]"></lucide-icon>
+      <h2 class="text-sm font-bold text-[var(--text)] uppercase tracking-wider">Información General</h2>
     </div>
     <button *ngIf="part" (click)="onCheckAvailability()"
       class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm shadow-lg shadow-emerald-900/30">
@@ -22,10 +22,10 @@
     </div>
     <div class="grid grid-cols-1 gap-4 text-sm">
       <div
-        class="bg-slate-800/40 p-4 rounded-xl border border-slate-700/30 hover:border-indigo-500/30 transition-colors">
+        class="bg-slate-800/40 p-4 rounded-xl border border-slate-700/30 hover:border-[var(--text-light)]/30 transition-colors">
         <span class="block text-slate-400 text-xs mb-2 uppercase tracking-wide">Marca Repuesto</span>
         <span class="font-bold text-white text-lg flex items-center gap-2">
-          <lucide-icon [img]="Factory" [size]="16" class="text-indigo-400"></lucide-icon>
+          <lucide-icon [img]="Factory" [size]="16" class="text-[var(--text-light)]"></lucide-icon>
           {{ part.brand }}
         </span>
       </div>

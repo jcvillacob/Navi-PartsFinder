@@ -1,2 +1,336 @@
 /* You can add global styles to this file, and also import other style files */
 @use "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  /* Modo oscuro - versión invertida de la paleta */
+  --primary: #2c3942;
+  --primary-dark: #1f282f;
+  --secondary: #a8b0ae;
+  --secondary-dark: #8a9391;
+  --bg: #1a1f24;
+  --text: #e2e8f0;
+  --text-light: #94a3b8;
+  --white: #ffffff;
+  --surface: #2c3942;
+  --surface-muted: #252b31;
+  --card-bg: var(--surface);
+  --line: rgba(195, 202, 200, 0.12);
+  --accent: var(--primary);
+  --success: #059669;
+  --warning: #F59E0B;
+  --danger: #DC2626;
+  --info: #0ea5e9;
+  --shadow: 0 30px 80px rgba(0, 0, 0, 0.3);
+  --shadow-hover: 0 40px 90px rgba(0, 0, 0, 0.4);
+  --shadow-soft: 0 12px 40px rgba(0, 0, 0, 0.2);
+  --radius: 22px;
+
+  /* Variables de aplicación mapeadas */
+  --app-bg: var(--bg);
+  --app-text: var(--text);
+  --header-bg: rgba(44, 57, 66, 0.95);
+  --header-border: var(--line);
+  --header-text: var(--text);
+  --header-muted: var(--text-light);
+  --button-bg: rgba(168, 176, 174, 0.15);
+  --button-bg-hover: rgba(168, 176, 174, 0.25);
+  --button-border: var(--line);
+  --menu-bg: rgba(44, 57, 66, 0.98);
+  --menu-border: var(--line);
+  --menu-item-bg: rgba(168, 176, 174, 0.1);
+  --menu-item-bg-hover: rgba(168, 176, 174, 0.2);
+  --accent-bg: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  --accent-text: var(--white);
+  --logo-filter: none;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  /* Modo claro - paleta original del usuario */
+  --primary: #354550;
+  --primary-dark: #2c3942;
+  --secondary: #C3CAC8;
+  --secondary-dark: #a8b0ae;
+  --bg: #F5F7F9;
+  --text: #354550;
+  --text-light: #6c757d;
+  --white: #ffffff;
+  --surface: #ffffff;
+  --surface-muted: #EEF1F3;
+  --card-bg: var(--surface);
+  --line: rgba(53, 69, 80, 0.08);
+  --accent: var(--primary);
+  --success: #059669;
+  --warning: #F59E0B;
+  --danger: #DC2626;
+  --info: #0ea5e9;
+  --shadow: 0 30px 80px rgba(53, 69, 80, 0.08);
+  --shadow-hover: 0 40px 90px rgba(53, 69, 80, 0.12);
+  --shadow-soft: 0 12px 40px rgba(53, 69, 80, 0.08);
+  --radius: 22px;
+
+  /* Variables de aplicación mapeadas */
+  --app-bg: var(--bg);
+  --app-text: var(--text);
+  --header-bg: rgba(255, 255, 255, 0.95);
+  --header-border: var(--line);
+  --header-text: var(--text);
+  --header-muted: var(--text-light);
+  --button-bg: rgba(195, 202, 200, 0.3);
+  --button-bg-hover: rgba(168, 176, 174, 0.4);
+  --button-border: var(--line);
+  --menu-bg: var(--white);
+  --menu-border: var(--line);
+  --menu-item-bg: rgba(195, 202, 200, 0.2);
+  --menu-item-bg-hover: rgba(195, 202, 200, 0.35);
+  --accent-bg: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  --accent-text: var(--white);
+  --logo-filter: invert(1);
+}
+
+[data-theme="light"] .bg-slate-950 {
+  background-color: var(--bg) !important;
+}
+
+[data-theme="light"] .bg-slate-950\/50 {
+  background-color: rgba(245, 247, 249, 0.9) !important;
+}
+
+[data-theme="light"] .bg-slate-950\/30 {
+  background-color: rgba(245, 247, 249, 0.8) !important;
+}
+
+[data-theme="light"] .bg-slate-900 {
+  background-color: var(--surface-muted) !important;
+}
+
+[data-theme="light"] .bg-slate-900\/50 {
+  background-color: rgba(238, 241, 243, 0.92) !important;
+}
+
+[data-theme="light"] .bg-slate-900\/80 {
+  background-color: rgba(238, 241, 243, 0.95) !important;
+}
+
+[data-theme="light"] .bg-slate-900\/20 {
+  background-color: rgba(195, 202, 200, 0.3) !important;
+}
+
+[data-theme="light"] .bg-slate-800 {
+  background-color: var(--secondary) !important;
+}
+
+[data-theme="light"] .bg-slate-800\/50 {
+  background-color: rgba(195, 202, 200, 0.5) !important;
+}
+
+[data-theme="light"] .bg-slate-800\/30 {
+  background-color: rgba(195, 202, 200, 0.3) !important;
+}
+
+[data-theme="light"] .bg-slate-700 {
+  background-color: var(--secondary-dark) !important;
+}
+
+[data-theme="light"] .text-slate-200 {
+  color: var(--text) !important;
+}
+
+[data-theme="light"] .text-slate-300 {
+  color: var(--text) !important;
+}
+
+[data-theme="light"] .text-slate-400 {
+  color: var(--text-light) !important;
+}
+
+[data-theme="light"] .text-slate-500 {
+  color: var(--text-light) !important;
+}
+
+[data-theme="light"] .text-slate-600 {
+  color: var(--text) !important;
+}
+
+[data-theme="light"] h1.text-white,
+[data-theme="light"] h2.text-white,
+[data-theme="light"] h3.text-white,
+[data-theme="light"] h4.text-white,
+[data-theme="light"] p.text-white,
+[data-theme="light"] span.text-white,
+[data-theme="light"] strong.text-white,
+[data-theme="light"] td.text-white,
+[data-theme="light"] th.text-white {
+  color: var(--text) !important;
+}
+
+[data-theme="light"] input.text-white,
+[data-theme="light"] textarea.text-white,
+[data-theme="light"] select.text-white {
+  color: var(--text) !important;
+}
+
+[data-theme="light"] .border-slate-700 {
+  border-color: var(--line) !important;
+}
+
+[data-theme="light"] .border-slate-800 {
+  border-color: var(--line) !important;
+}
+
+[data-theme="light"] .placeholder-slate-500::placeholder {
+  color: var(--text-light) !important;
+}
+
+[data-theme="light"] .placeholder-slate-600::placeholder {
+  color: var(--text-light) !important;
+}
+
+body {
+  background: var(--app-bg);
+  color: var(--app-text);
+}
+
+/* Sobrescrituras adicionales de Tailwind */
+
+/* Colores slate para modo oscuro */
+.bg-slate-950 {
+  background-color: var(--bg);
+}
+
+.bg-slate-900 {
+  background-color: var(--surface);
+}
+
+.bg-slate-900\/50 {
+  background-color: rgba(44, 57, 66, 0.5);
+}
+
+.bg-slate-800 {
+  background-color: var(--surface-muted);
+}
+
+.bg-slate-800\/80 {
+  background-color: rgba(37, 43, 49, 0.8);
+}
+
+.bg-slate-800\/50 {
+  background-color: rgba(37, 43, 49, 0.5);
+}
+
+.bg-slate-700 {
+  background-color: var(--secondary-dark);
+}
+
+.border-slate-700 {
+  border-color: var(--line);
+}
+
+.text-slate-300 {
+  color: var(--secondary);
+}
+
+.text-slate-400 {
+  color: var(--text-light);
+}
+
+/* Colores indigo -> primary */
+.bg-indigo-500 {
+  background-color: var(--primary);
+}
+
+.bg-indigo-500\/30 {
+  background-color: rgba(53, 69, 80, 0.3);
+}
+
+.bg-indigo-600 {
+  background-color: var(--primary);
+}
+
+.bg-indigo-700 {
+  background-color: var(--primary-dark);
+}
+
+.hover\:bg-indigo-700:hover {
+  background-color: var(--primary-dark);
+}
+
+.border-indigo-500 {
+  border-color: var(--primary);
+}
+
+.border-t-indigo-500 {
+  border-top-color: var(--primary);
+}
+
+/* Colores de éxito -> success */
+.bg-green-900\/30 {
+  background-color: rgba(5, 150, 105, 0.15);
+}
+
+.border-green-700 {
+  border-color: var(--success);
+}
+
+.text-green-300 {
+  color: var(--success);
+}
+
+/* Colores de error -> danger */
+.bg-red-900\/30 {
+  background-color: rgba(220, 38, 38, 0.15);
+}
+
+.border-red-700 {
+  border-color: var(--danger);
+}
+
+.text-red-300 {
+  color: var(--danger);
+}
+
+/* Hover effects para slate */
+.hover\:bg-slate-700:hover {
+  background-color: var(--secondary);
+}
+
+.hover\:bg-slate-600:hover {
+  background-color: var(--secondary-dark);
+}
+
+/* Selection */
+.selection\:bg-indigo-500::selection {
+  background-color: var(--primary);
+}
+
+.selection\:text-white::selection {
+  color: var(--white);
+}
+
+/* Sobrescrituras específicas para modo claro */
+[data-theme="light"] .bg-slate-800\/80 {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="light"] .bg-indigo-600,
+[data-theme="light"] .bg-indigo-700,
+[data-theme="light"] .hover\:bg-indigo-700:hover {
+  background-color: var(--primary) !important;
+}
+
+[data-theme="light"] .bg-green-900\/30 {
+  background-color: rgba(5, 150, 105, 0.12) !important;
+}
+
+[data-theme="light"] .text-green-300 {
+  color: var(--success) !important;
+}
+
+[data-theme="light"] .bg-red-900\/30 {
+  background-color: rgba(220, 38, 38, 0.12) !important;
+}
+
+[data-theme="light"] .text-red-300 {
+  color: var(--danger) !important;
+}
