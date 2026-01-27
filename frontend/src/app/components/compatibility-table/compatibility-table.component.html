@@ -1,11 +1,12 @@
-<div
-  class="flex-grow bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden flex flex-col shadow-2xl">
-  <div class="bg-[var(--primary)]/10 px-6 py-4 border-b border-slate-700 flex justify-between items-center">
+<div class="flex-grow bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden flex flex-col shadow-2xl">
+  <div
+    class="bg-[var(--primary)]/10 px-6 py-4 border-b border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
     <h2 class="text-[var(--text)] font-bold flex items-center gap-2">
       <lucide-icon [img]="Box" [size]="18"></lucide-icon>
       Tabla de Compatibilidades
     </h2>
-    <span class="text-xs bg-[var(--primary)]/20 text-[var(--text)] px-2 py-1 rounded border border-[var(--line)]">
+    <span
+      class="text-xs bg-[var(--primary)]/20 text-[var(--text)] px-2 py-1 rounded border border-[var(--line)] whitespace-nowrap">
       {{ compatibilities.length }} Referencias encontradas
     </span>
   </div>

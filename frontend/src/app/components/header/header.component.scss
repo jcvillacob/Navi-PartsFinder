@@ -12,7 +12,7 @@
   border-bottom: 1px solid var(--header-border);
   box-shadow: var(--shadow-soft);
   position: relative;
-  z-index: 10;
+  z-index: 50;
 }
 
 .header-brand {
@@ -69,7 +69,10 @@
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 200ms ease, border-color 200ms ease, transform 200ms ease;
+  transition:
+    background 200ms ease,
+    border-color 200ms ease,
+    transform 200ms ease;
 }
 
 .theme-toggle:hover {
@@ -93,7 +96,9 @@
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 200ms ease, border-color 200ms ease;
+  transition:
+    background 200ms ease,
+    border-color 200ms ease;
 }
 
 .user-trigger:hover {
@@ -158,7 +163,9 @@
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 200ms ease, border-color 200ms ease;
+  transition:
+    background 200ms ease,
+    border-color 200ms ease;
 }
 
 .menu-actions button:hover {
@@ -175,7 +182,9 @@
   color: var(--accent-text);
   font-weight: 700;
   cursor: pointer;
-  transition: transform 200ms ease, box-shadow 200ms ease;
+  transition:
+    transform 200ms ease,
+    box-shadow 200ms ease;
 }
 
 .logout-button:hover {
@@ -186,13 +195,21 @@
 @media (max-width: 900px) {
   .app-header {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch; /* Change to stretch to fill width */
+    gap: 12px; /* Reduce gap */
+    padding: 12px 16px; /* Reduce padding */
   }
 
   .header-tools {
     width: 100%;
-    justify-content: space-between;
+    justify-content: flex-end; /* Align to right by default */
     flex-wrap: wrap;
+    gap: 8px; /* Smaller gap */
+  }
+
+  /* Make user menu more compact on mobile */
+  .user-trigger {
+    padding: 6px 10px;
   }
 }
 
@@ -237,8 +254,8 @@
   color: var(--danger);
 }
 
-[data-theme="light"] .notification-info,
-[data-theme="light"] .notification-success,
-[data-theme="light"] .notification-error {
+[data-theme='light'] .notification-info,
+[data-theme='light'] .notification-success,
+[data-theme='light'] .notification-error {
   color: var(--text);
 }
