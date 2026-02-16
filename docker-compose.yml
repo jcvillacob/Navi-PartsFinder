@@ -18,32 +18,52 @@ services:
       timeout: 5s
       retries: 5
 
+  # S3 local privado para imágenes (MinIO)
+  minio:
+    image: minio/minio:latest
+    container_name: equivalencias_minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+    command: server /data --console-address ":9001"
+    volumes:
+      - ./minio-data:/data
+    networks:
+      - red-equivalencias
+
   # Backend (Express.js + PostgreSQL)
   backend:
     build: ./backend
     container_name: equivalencias_backend
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:3000:3000"
     environment:
       - NODE_ENV=production
-      - PORT=3000
+      - PORT=${PORT:-5000}
       - DATABASE_URL=postgres://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin123}@db:5432/${POSTGRES_DB:-equivalencias}
       - JWT_SECRET=${JWT_SECRET:-change-me}
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-8h}
+      - INVENTORY_SYNC_TOKEN=${INVENTORY_SYNC_TOKEN:-navi-local-sync-token}
       - DEFAULT_ADMIN_USERNAME=${DEFAULT_ADMIN_USERNAME:-admin}
       - DEFAULT_ADMIN_PASSWORD=${DEFAULT_ADMIN_PASSWORD:-admin123}
       - DEFAULT_ADMIN_ROLE=${DEFAULT_ADMIN_ROLE:-admin}
       - DEFAULT_ADMIN_NAME=${DEFAULT_ADMIN_NAME:-adminitrador}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3100,http://100.108.186.115:3100}
+      - S3_ENDPOINT=${S3_ENDPOINT:-http://minio:9000}
+      - S3_REGION=${S3_REGION:-us-east-1}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-minioadmin}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:-minioadmin}
+      - S3_BUCKET=${S3_BUCKET:-parts-images}
+      - S3_FORCE_PATH_STYLE=${S3_FORCE_PATH_STYLE:-true}
       - INVENTORY_DB_USER=${INVENTORY_DB_USER}
       - INVENTORY_DB_PASSWORD=${INVENTORY_DB_PASSWORD}
       - INVENTORY_DB_SERVER=${INVENTORY_DB_SERVER}
       - INVENTORY_DB_NAME=${INVENTORY_DB_NAME}
-    volumes:
-      - ./uploads:/app/uploads
     depends_on:
       db:
         condition: service_healthy
+      minio:
+        condition: service_started
     networks:
       - red-equivalencias
 
@@ -53,13 +73,27 @@ services:
     container_name: equivalencias_frontend
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8080:4000"
+      - "${FRONTEND_BIND_IP:-127.0.0.1}:${FRONTEND_PORT:-3100}:${FRONTEND_PORT:-3100}"
     environment:
-      - API_URL=http://backend:3000
+      - PORT=${FRONTEND_PORT:-3100}
+      - API_UPSTREAM=http://backend:${PORT:-5000}
     depends_on:
       - backend
     networks:
       - red-equivalencias
+
+  # Cloudflare Tunnel (perfil opcional: tunnel)
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: equivalencias_cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://frontend:${FRONTEND_PORT:-3100} run --token ${CLOUDFLARED_TUNNEL_TOKEN}
+    depends_on:
+      - frontend
+    networks:
+      - red-equivalencias
+    profiles:
+      - tunnel
 
 networks:
   red-equivalencias:

@@ -10,6 +10,7 @@ frontend/.angular/
 
 # Base de datos PostgreSQL (Docker)
 database-data/
+minio-data/
 
 # Uploads
 uploads/
@@ -27,3 +28,6 @@ uploads/
 
 # Documentación privada
 Documentacion_Tecnica_Inventario_Navitrans.md
+
+
+.cloudflared/

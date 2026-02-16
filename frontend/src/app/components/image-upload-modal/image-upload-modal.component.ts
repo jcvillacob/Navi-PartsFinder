@@ -12,6 +12,8 @@ import { PartsService } from '../../services/parts.service';
   styleUrl: './image-upload-modal.component.scss'
 })
 export class ImageUploadModalComponent {
+  private readonly maxFileSizeBytes = 5 * 1024 * 1024;
+
   @Input() isOpen: boolean = false;
   @Output() close = new EventEmitter<void>();
   @Output() imageUploaded = new EventEmitter<void>();
@@ -36,6 +38,11 @@ export class ImageUploadModalComponent {
     if (file) {
       if (!file.type.startsWith('image/')) {
         this.errorMessage = 'Por favor selecciona un archivo de imagen válido';
+        return;
+      }
+
+      if (file.size > this.maxFileSizeBytes) {
+        this.errorMessage = 'La imagen supera el límite de 5MB';
         return;
       }
 
@@ -64,6 +71,11 @@ export class ImageUploadModalComponent {
     if (files && files.length > 0) {
       const file = files[0];
       if (file.type.startsWith('image/')) {
+        if (file.size > this.maxFileSizeBytes) {
+          this.errorMessage = 'La imagen supera el límite de 5MB';
+          return;
+        }
+
         this.selectedFile = file;
         this.errorMessage = '';
         

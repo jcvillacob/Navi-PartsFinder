@@ -7,13 +7,10 @@ WORKDIR /app
 COPY package*.json ./
 
 # Instalar dependencias
-RUN npm ci --only=production
+RUN npm install --omit=dev
 
 # Copiar código fuente
 COPY src/ ./src/
-
-# Crear directorio para uploads
-RUN mkdir -p /app/uploads
 
 # Exponer puerto
 EXPOSE 3000

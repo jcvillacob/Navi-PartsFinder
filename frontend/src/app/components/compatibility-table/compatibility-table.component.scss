@@ -1,0 +1,59 @@
+.compat-table {
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.compat-table__header {
+  background: var(--surface-muted);
+  border-bottom: 1px solid var(--line);
+}
+
+.compat-table__title {
+  color: var(--text);
+}
+
+.compat-table__count {
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.compat-table__thead {
+  background: var(--bg);
+  color: var(--text-light);
+  border-bottom: 1px solid var(--line);
+}
+
+.compat-table__tbody {
+  color: var(--text);
+}
+
+.compat-table__row {
+  border-bottom: 1px solid var(--line);
+}
+
+.compat-table__row:hover {
+  background: var(--surface-muted);
+}
+
+.compat-table__cell {
+  color: var(--text);
+}
+
+.compat-table__compatible {
+  color: var(--text);
+}
+
+.compat-table__equipment {
+  color: var(--text);
+}
+
+.compat-table__brand {
+  color: var(--text-light);
+}
+
+.compat-table__badge {
+  color: var(--text);
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
+}

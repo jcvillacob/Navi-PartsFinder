@@ -6,7 +6,8 @@
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm start",
     "start:backend": "cd backend && npm start",
-    "build:frontend": "cd frontend && npm run build"
+    "build:frontend": "cd frontend && npm run build",
+    "sync:inventory-local": "node sync-inventory-local.js"
   },
   "keywords": [],
   "author": "Navitrans",

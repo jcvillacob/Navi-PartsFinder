@@ -41,6 +41,14 @@
             <lucide-icon [img]="Image" [size]="16"></lucide-icon>
             Subir Imagen
           </button>
+          <button *ngIf="canManageUsers" type="button" (click)="exportData()" [disabled]="isExportingData">
+            <lucide-icon [img]="Download" [size]="16"></lucide-icon>
+            {{ isExportingData ? 'Exportando...' : 'Exportar Excel' }}
+          </button>
+          <button *ngIf="canManageUsers" type="button" (click)="resetData()" [disabled]="isResettingData">
+            <lucide-icon [img]="Database" [size]="16"></lucide-icon>
+            {{ isResettingData ? 'Reiniciando...' : 'Reiniciar Datos' }}
+          </button>
           <button *ngIf="canManageUsers" type="button" (click)="goToUsers()">
             <lucide-icon [img]="Users" [size]="16"></lucide-icon>
             Usuarios

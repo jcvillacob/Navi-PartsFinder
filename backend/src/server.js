@@ -1,47 +1,65 @@
 const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
-const fs = require("fs");
+const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const XLSX = require("xlsx");
 const db = require("./database");
-const { PORT, JWT_SECRET, JWT_EXPIRES_IN } = require("./config");
-const path = require("path");
+const {
+  PORT,
+  JWT_SECRET,
+  JWT_EXPIRES_IN,
+  INVENTORY_SYNC_TOKEN,
+  ALLOWED_ORIGINS,
+} = require("./config");
 const { requireAuth, requireRole } = require("./middleware/auth");
+const {
+  getInventoryDetail,
+  replaceInventorySnapshot,
+  upsertInventorySnapshot,
+} = require("./services/inventory.service");
+const {
+  ensureBucket,
+  uploadObject,
+  getObject,
+  deleteObjects,
+  bucket: imageBucket,
+} = require("./services/image-storage.service");
+const { processImageVariants } = require("./services/image-processing.service");
 
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || ALLOWED_ORIGINS.length === 0) {
+        return callback(null, true);
+      }
+
+      if (ALLOWED_ORIGINS.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Origen no permitido por CORS"));
+    },
+  }),
+);
 app.use(express.json({ limit: "50mb" }));
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
-
-// Configuración de multer para subida de imágenes
-const uploadsDir = path.join(__dirname, "../uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    const partNumber = req.params.partNumber.replace(/[^a-zA-Z0-9-_]/g, "_");
-    const ext = path.extname(file.originalname);
-    cb(null, `${partNumber}${ext}`);
-  },
-});
 
 const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp/;
-    const extname = allowedTypes.test(
-      path.extname(file.originalname).toLowerCase(),
-    );
-    const mimetype = allowedTypes.test(file.mimetype);
-    if (extname && mimetype) {
+    const allowedMimeTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+    ];
+    const isValidMime = allowedMimeTypes.includes(file.mimetype);
+    if (isValidMime) {
       cb(null, true);
     } else {
       cb(new Error("Solo se permiten imágenes (jpeg, jpg, png, gif, webp)"));
@@ -50,6 +68,60 @@ const upload = multer({
 });
 
 const ALLOWED_ROLES = ["admin", "importer", "viewer"];
+
+function sanitizePartNumber(partNumber) {
+  return String(partNumber || "").replace(/[^a-zA-Z0-9-_]/g, "_");
+}
+
+function buildPrivateImageUrl(partNumber, imageId, variant = "medium") {
+  return `/api/parts/${encodeURIComponent(partNumber)}/image?variant=${variant}&v=${imageId}`;
+}
+
+function sanitizeExcelCellValue(value) {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  const trimmed = value.trim();
+  if (/^[=+\-@]/.test(trimmed)) {
+    return `'${value}`;
+  }
+
+  return value;
+}
+
+function sanitizeRowsForExcel(rows) {
+  return rows.map((row) => {
+    const sanitized = {};
+    for (const [key, value] of Object.entries(row)) {
+      sanitized[key] = sanitizeExcelCellValue(value);
+    }
+    return sanitized;
+  });
+}
+
+function buildExportFilename() {
+  const now = new Date();
+  const iso = now.toISOString().replace(/[-:]/g, "").replace(/\..+$/, "");
+  return `navi-parts-data-${iso}.xlsx`;
+}
+
+function requireInventorySyncToken(req, res, next) {
+  const providedToken =
+    req.headers["x-inventory-sync-token"] ||
+    req.headers["x-sync-token"] ||
+    req.query.token;
+
+  if (!providedToken) {
+    return res.status(401).json({ error: "Token de sincronización requerido" });
+  }
+
+  if (providedToken !== INVENTORY_SYNC_TOKEN) {
+    return res.status(403).json({ error: "Token de sincronización inválido" });
+  }
+
+  return next();
+}
 
 // Función helper para registrar logs
 async function logActivity(userId, username, actionType, details, req) {
@@ -244,6 +316,214 @@ app.put(
     }
   },
 );
+
+// Exportar datos en Excel (solo admin)
+app.get(
+  "/api/admin/data/export",
+  requireAuth,
+  requireRole(["admin"]),
+  async (req, res) => {
+    try {
+      const [parts, compatibilities, inventory, images] = await Promise.all([
+        db.all(
+          `SELECT
+             id,
+             part_number,
+             description,
+             response_brand,
+             image_url,
+             created_at
+           FROM parts
+           ORDER BY id`,
+        ),
+        db.all(
+          `SELECT
+             pc.id,
+             p.part_number,
+             pc.compatible_part_number,
+             pc.equipment_model,
+             pc.original_brand,
+             pc.created_at
+           FROM part_compatibilities pc
+           JOIN parts p ON p.id = pc.part_id
+           ORDER BY p.part_number, pc.id`,
+        ),
+        db.all(
+          `SELECT
+             part_number,
+             zona,
+             sede,
+             almacen,
+             cantidad,
+             costo_unitario,
+             source_updated_at,
+             synced_at
+           FROM inventory_availability
+           ORDER BY part_number, zona, sede, almacen`,
+        ),
+        db.all(
+          `SELECT
+             pi.id,
+             p.part_number,
+             pi.storage_provider,
+             pi.bucket,
+             pi.object_key_medium,
+             pi.object_key_thumb,
+             pi.content_type,
+             pi.size_bytes,
+             pi.width,
+             pi.height,
+             pi.checksum_sha256,
+             pi.is_primary,
+             pi.created_at,
+             pi.deleted_at
+           FROM part_images pi
+           JOIN parts p ON p.id = pi.part_id
+           ORDER BY p.part_number, pi.id`,
+        ),
+      ]);
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(
+        workbook,
+        XLSX.utils.json_to_sheet(sanitizeRowsForExcel(parts)),
+        "parts",
+      );
+      XLSX.utils.book_append_sheet(
+        workbook,
+        XLSX.utils.json_to_sheet(sanitizeRowsForExcel(compatibilities)),
+        "compatibilities",
+      );
+      XLSX.utils.book_append_sheet(
+        workbook,
+        XLSX.utils.json_to_sheet(sanitizeRowsForExcel(inventory)),
+        "inventory",
+      );
+      XLSX.utils.book_append_sheet(
+        workbook,
+        XLSX.utils.json_to_sheet(sanitizeRowsForExcel(images)),
+        "images",
+      );
+
+      const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "buffer" });
+      const filename = buildExportFilename();
+
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      );
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.send(buffer);
+
+      if (req.user) {
+        logActivity(
+          req.user.id,
+          req.user.username,
+          "UPLOAD",
+          {
+            type: "ADMIN_EXPORT_DATA",
+            stats: {
+              parts: parts.length,
+              compatibilities: compatibilities.length,
+              inventory: inventory.length,
+              images: images.length,
+            },
+          },
+          req,
+        );
+      }
+    } catch (error) {
+      console.error("Error exportando datos:", error);
+      res.status(500).json({ error: "Error exportando datos" });
+    }
+  },
+);
+
+// Reiniciar datos de la base (sin usuarios, solo admin)
+app.post(
+  "/api/admin/data/reset",
+  requireAuth,
+  requireRole(["admin"]),
+  async (req, res) => {
+    const client = await db.pool.connect();
+
+    try {
+      const counts = await db.get(
+        `SELECT
+           (SELECT COUNT(*)::int FROM parts) AS parts,
+           (SELECT COUNT(*)::int FROM part_compatibilities) AS compatibilities,
+           (SELECT COUNT(*)::int FROM part_images) AS images,
+           (SELECT COUNT(*)::int FROM inventory_availability) AS inventory,
+           (SELECT COUNT(*)::int FROM activity_logs) AS activity_logs`,
+      );
+
+      const imageKeysRows = await db.all(
+        `SELECT object_key_original, object_key_medium, object_key_thumb
+         FROM part_images`,
+      );
+
+      const objectKeys = [
+        ...new Set(
+          imageKeysRows
+            .flatMap((row) => [
+              row.object_key_original,
+              row.object_key_medium,
+              row.object_key_thumb,
+            ])
+            .filter(Boolean),
+        ),
+      ];
+
+      await client.query("BEGIN");
+      await client.query(
+        `TRUNCATE TABLE
+           part_images,
+           part_compatibilities,
+           inventory_availability,
+           activity_logs,
+           parts
+         RESTART IDENTITY CASCADE`,
+      );
+      await client.query("COMMIT");
+
+      let deletedObjects = 0;
+      let objectCleanupWarning = null;
+      if (objectKeys.length > 0) {
+        try {
+          await deleteObjects(objectKeys);
+          deletedObjects = objectKeys.length;
+        } catch (cleanupError) {
+          objectCleanupWarning =
+            "Datos eliminados de la base, pero no fue posible limpiar todos los objetos en S3";
+          console.error(
+            "Error limpiando objetos de imágenes en S3:",
+            cleanupError.message,
+          );
+        }
+      }
+
+      return res.json({
+        ok: true,
+        message: "Datos reiniciados correctamente",
+        deleted: {
+          ...counts,
+          deletedObjects,
+        },
+        warning: objectCleanupWarning,
+      });
+    } catch (error) {
+      try {
+        await client.query("ROLLBACK");
+      } catch (rollbackError) {
+        console.error("Error haciendo rollback de reset:", rollbackError.message);
+      }
+      console.error("Error reiniciando datos:", error);
+      return res.status(500).json({ error: "Error reiniciando datos" });
+    } finally {
+      client.release();
+    }
+  },
+);
 // Endpoint de búsqueda
 app.get("/api/search", requireAuth, async (req, res) => {
   try {
@@ -362,13 +642,28 @@ app.get("/api/parts/:partNumber", requireAuth, async (req, res) => {
       return res.status(404).json({ error: "Part not found" });
     }
 
+    const primaryImage = await db.get(
+      `SELECT id
+       FROM part_images
+       WHERE part_id = $1
+         AND is_primary = TRUE
+         AND deleted_at IS NULL
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [part.id],
+    );
+
+    const imageUrl = primaryImage
+      ? buildPrivateImageUrl(part.part_number, primaryImage.id, "medium")
+      : null;
+
     res.json({
       partNumber: part.part_number,
       description: part.description,
       brand: part.response_brand,
       category: "General",
       stock: 0,
-      imageUrl: part.image_url || null,
+      imageUrl,
     });
   } catch (error) {
     console.error("Error obteniendo parte:", error);
@@ -544,15 +839,116 @@ app.post(
   },
 );
 
+// Sincronizar disponibilidad desde fuente externa (ej: PC local con acceso a SQL Server)
+app.post(
+  "/api/inventory/sync",
+  requireInventorySyncToken,
+  async (req, res) => {
+    try {
+      const items = Array.isArray(req.body) ? req.body : req.body?.items;
+      if (!Array.isArray(items)) {
+        return res.status(400).json({
+          error:
+            "Payload inválido. Se esperaba un array o un objeto con { items: [] }",
+        });
+      }
+
+      const mode = req.query.mode === "upsert" ? "upsert" : "replace";
+      const result =
+        mode === "upsert"
+          ? await upsertInventorySnapshot(items)
+          : await replaceInventorySnapshot(items);
+
+      return res.status(201).json({
+        ok: true,
+        mode,
+        ...result,
+      });
+    } catch (error) {
+      console.error("Error sincronizando inventario:", error);
+      return res.status(500).json({ error: error.message });
+    }
+  },
+);
+
 // Obtener detalle de inventario
 app.get("/api/inventory/:partNumber", requireAuth, async (req, res) => {
   try {
     const { partNumber } = req.params;
-    const { getInventoryDetail } = require("./services/inventory.service");
     const inventoryDetail = await getInventoryDetail(partNumber);
     res.json(inventoryDetail);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Obtener imagen de una parte (acceso privado autenticado)
+app.get("/api/parts/:partNumber/image", requireAuth, async (req, res) => {
+  try {
+    const { partNumber } = req.params;
+    const variant = req.query.variant === "thumb" ? "thumb" : "medium";
+
+    const part = await db.get("SELECT id FROM parts WHERE part_number = $1", [
+      partNumber,
+    ]);
+
+    if (!part) {
+      return res.status(404).json({ error: "Parte no encontrada" });
+    }
+
+    const image = await db.get(
+      `SELECT object_key_medium, object_key_thumb, content_type
+       FROM part_images
+       WHERE part_id = $1
+         AND is_primary = TRUE
+         AND deleted_at IS NULL
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [part.id],
+    );
+
+    if (!image) {
+      return res.status(404).json({ error: "Imagen no encontrada" });
+    }
+
+    const objectKey =
+      variant === "thumb"
+        ? image.object_key_thumb || image.object_key_medium
+        : image.object_key_medium || image.object_key_thumb;
+
+    if (!objectKey) {
+      return res.status(404).json({ error: "Imagen no encontrada" });
+    }
+
+    const object = await getObject(objectKey);
+
+    res.setHeader("Content-Type", object.ContentType || image.content_type);
+    res.setHeader("Cache-Control", "private, max-age=300");
+
+    if (object.ContentLength) {
+      res.setHeader("Content-Length", object.ContentLength);
+    }
+
+    if (!object.Body || typeof object.Body.pipe !== "function") {
+      return res.status(500).json({ error: "No fue posible leer la imagen" });
+    }
+
+    object.Body.on("error", (streamError) => {
+      console.error("Error transmitiendo imagen:", streamError.message);
+      if (!res.headersSent) {
+        res.status(500).end("Error transmitiendo imagen");
+      }
+    });
+
+    object.Body.pipe(res);
+  } catch (error) {
+    const notFoundCodes = new Set(["NoSuchKey", "NotFound", "NoSuchBucket"]);
+    if (notFoundCodes.has(error.name)) {
+      return res.status(404).json({ error: "Imagen no encontrada" });
+    }
+
+    console.error("Error obteniendo imagen:", error);
+    return res.status(500).json({ error: "Error obteniendo imagen" });
   }
 });
 
@@ -563,37 +959,163 @@ app.post(
   requireRole(["admin", "importer"]),
   upload.single("image"),
   async (req, res) => {
+    const uploadedKeys = [];
+    let previousImage = null;
+
     try {
       const { partNumber } = req.params;
 
-      if (!req.file) {
+      if (!req.file || !req.file.buffer) {
         return res
           .status(400)
           .json({ error: "No se proporcionó ninguna imagen" });
       }
 
-      const part = await db.get("SELECT id FROM parts WHERE part_number = $1", [
-        partNumber,
-      ]);
+      const part = await db.get(
+        "SELECT id, part_number FROM parts WHERE part_number = $1",
+        [partNumber],
+      );
 
       if (!part) {
-        fs.unlinkSync(req.file.path);
         return res.status(404).json({ error: "Parte no encontrada" });
       }
 
-      const imageUrl = `/uploads/${req.file.filename}`;
-      await db.run("UPDATE parts SET image_url = $1 WHERE part_number = $2", [
-        imageUrl,
-        partNumber,
+      const { mediumBuffer, thumbBuffer, mediumWidth, mediumHeight } =
+        await processImageVariants(req.file.buffer);
+
+      const checksum = crypto
+        .createHash("sha256")
+        .update(mediumBuffer)
+        .digest("hex");
+
+      const uploadId = crypto.randomUUID();
+      const safePartNumber = sanitizePartNumber(part.part_number);
+      const keyPrefix = `parts/${safePartNumber}/${uploadId}`;
+      const mediumKey = `${keyPrefix}/medium.webp`;
+      const thumbKey = `${keyPrefix}/thumb.webp`;
+
+      await Promise.all([
+        uploadObject({
+          key: mediumKey,
+          body: mediumBuffer,
+          contentType: "image/webp",
+          cacheControl: "private, max-age=31536000, immutable",
+        }),
+        uploadObject({
+          key: thumbKey,
+          body: thumbBuffer,
+          contentType: "image/webp",
+          cacheControl: "private, max-age=31536000, immutable",
+        }),
       ]);
+
+      uploadedKeys.push(mediumKey, thumbKey);
+
+      previousImage = await db.get(
+        `SELECT id, object_key_medium, object_key_thumb
+         FROM part_images
+         WHERE part_id = $1
+           AND is_primary = TRUE
+           AND deleted_at IS NULL
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [part.id],
+      );
+
+      const client = await db.pool.connect();
+      let insertedImageId = null;
+
+      try {
+        await client.query("BEGIN");
+
+        await client.query(
+          `UPDATE part_images
+           SET is_primary = FALSE, deleted_at = CURRENT_TIMESTAMP
+           WHERE part_id = $1
+             AND is_primary = TRUE
+             AND deleted_at IS NULL`,
+          [part.id],
+        );
+
+        const insertResult = await client.query(
+          `INSERT INTO part_images (
+             part_id,
+             image_path,
+             storage_provider,
+             bucket,
+             object_key_medium,
+             object_key_thumb,
+             content_type,
+             size_bytes,
+             width,
+             height,
+             checksum_sha256,
+             is_primary,
+             created_by
+           ) VALUES (
+             $1, $2, 's3', $3, $4, $5, 'image/webp', $6, $7, $8, $9, TRUE, $10
+           )
+           RETURNING id`,
+          [
+            part.id,
+            mediumKey,
+            imageBucket,
+            mediumKey,
+            thumbKey,
+            mediumBuffer.length,
+            mediumWidth,
+            mediumHeight,
+            checksum,
+            req.user?.id || null,
+          ],
+        );
+
+        insertedImageId = insertResult.rows[0].id;
+        const imageUrl = buildPrivateImageUrl(
+          part.part_number,
+          insertedImageId,
+          "medium",
+        );
+
+        await client.query(
+          "UPDATE parts SET image_url = $1 WHERE part_number = $2",
+          [imageUrl, part.part_number],
+        );
+
+        await client.query("COMMIT");
+      } catch (dbError) {
+        await client.query("ROLLBACK");
+        throw dbError;
+      } finally {
+        client.release();
+      }
+
+      if (previousImage) {
+        try {
+          await deleteObjects([
+            previousImage.object_key_medium,
+            previousImage.object_key_thumb,
+          ]);
+        } catch (cleanupError) {
+          console.error(
+            "No fue posible eliminar imágenes anteriores:",
+            cleanupError.message,
+          );
+        }
+      }
+
+      const imageUrl = buildPrivateImageUrl(
+        part.part_number,
+        insertedImageId,
+        "medium",
+      );
 
       res.json({
         message: "Imagen subida correctamente",
         imageUrl,
-        filename: req.file.filename,
+        imageId: insertedImageId,
       });
 
-      // Registrar Subida de Imagen
       if (req.user) {
         logActivity(
           req.user.id,
@@ -601,17 +1123,62 @@ app.post(
           "UPLOAD",
           {
             type: "IMAGE_UPLOAD",
-            partNumber: partNumber,
-            filename: req.file.filename,
+            partNumber: part.part_number,
+            imageId: insertedImageId,
           },
           req,
         );
       }
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      if (uploadedKeys.length > 0) {
+        try {
+          await deleteObjects(uploadedKeys);
+        } catch (cleanupError) {
+          console.error(
+            "No fue posible limpiar objetos tras fallo:",
+            cleanupError.message,
+          );
+        }
+      }
+
+      console.error("Error subiendo imagen:", error);
+      return res.status(500).json({ error: "Error subiendo imagen" });
     }
   },
 );
+
+app.use((error, req, res, next) => {
+  if (!error) {
+    return next();
+  }
+
+  if (error.message === "Origen no permitido por CORS") {
+    return res.status(403).json({ error: "Origen no permitido" });
+  }
+
+  if (error instanceof multer.MulterError) {
+    if (error.code === "LIMIT_FILE_SIZE") {
+      return res.status(413).json({ error: "La imagen supera el límite de 5MB" });
+    }
+
+    return res.status(400).json({ error: error.message });
+  }
+
+  if (error.message?.includes("Solo se permiten imágenes")) {
+    return res.status(400).json({ error: error.message });
+  }
+
+  return next(error);
+});
+
+app.use((error, req, res, next) => {
+  if (res.headersSent) {
+    return next(error);
+  }
+
+  console.error("Error no controlado:", error);
+  return res.status(500).json({ error: "Error interno del servidor" });
+});
 
 // Health check
 app.get("/api/health", (req, res) => {
@@ -626,6 +1193,7 @@ app.get("/api/health", (req, res) => {
 async function startServer() {
   try {
     await db.initialize();
+    await ensureBucket();
     app.listen(PORT, () => {
       console.log(`🚀 Backend corriendo en http://localhost:${PORT}`);
     });

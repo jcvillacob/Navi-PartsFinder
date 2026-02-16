@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpResponse } from '@angular/common/http';
 import { Observable, of, map } from 'rxjs';
 import { Part } from '../models/part.model';
 import { Compatibility } from '../models/compatibility.model';
@@ -11,7 +11,6 @@ import { environment } from '../../environments/environment';
 export class PartsService {
   // URL directa al backend
   private apiUrl = environment.apiUrl;
-  private baseUrl = environment.baseUrl;
 
   constructor(private http: HttpClient) {}
 
@@ -19,12 +18,13 @@ export class PartsService {
    * Obtener información de una parte por su número
    */
   getPartByNumber(partNumber: string): Observable<Part> {
-    return this.http.get<Part>(`${this.apiUrl}/parts/${partNumber}`).pipe(
-      map(part => ({
-        ...part,
-        imageUrl: part.imageUrl ? `${this.baseUrl}${part.imageUrl}` : undefined
-      }))
-    );
+    return this.http
+      .get<Part>(`${this.apiUrl}/parts/${encodeURIComponent(partNumber)}`)
+      .pipe(
+        map((part) => ({
+          ...part,
+        })),
+      );
   }
 
   /**
@@ -63,7 +63,20 @@ export class PartsService {
   uploadPartImage(partNumber: string, file: File): Observable<any> {
     const formData = new FormData();
     formData.append('image', file);
-    return this.http.post(`${this.apiUrl}/parts/${partNumber}/image`, formData);
+    return this.http.post(
+      `${this.apiUrl}/parts/${encodeURIComponent(partNumber)}/image`,
+      formData
+    );
+  }
+
+  /**
+   * Obtener imagen privada de una parte (requiere token)
+   */
+  getPartImage(partNumber: string, variant: 'thumb' | 'medium' = 'medium'): Observable<Blob> {
+    return this.http.get(
+      `${this.apiUrl}/parts/${encodeURIComponent(partNumber)}/image?variant=${variant}`,
+      { responseType: 'blob' }
+    );
   }
 
   /**
@@ -71,6 +84,23 @@ export class PartsService {
    */
   getInventoryDetail(partNumber: string): Observable<InventoryDetail> {
     return this.http.get<InventoryDetail>(`${this.apiUrl}/inventory/${partNumber}`);
+  }
+
+  /**
+   * Exportar datos de negocio en Excel (solo admin)
+   */
+  exportAdminData(): Observable<HttpResponse<Blob>> {
+    return this.http.get(`${this.apiUrl}/admin/data/export`, {
+      observe: 'response',
+      responseType: 'blob'
+    });
+  }
+
+  /**
+   * Reiniciar datos de negocio (sin usuarios, solo admin)
+   */
+  resetAdminData(): Observable<AdminResetResponse> {
+    return this.http.post<AdminResetResponse>(`${this.apiUrl}/admin/data/reset`, {});
   }
 }
 
@@ -89,4 +119,18 @@ export interface InventoryDetail {
   available: boolean;
   locations: InventoryLocation[];
   error?: string;
+}
+
+export interface AdminResetResponse {
+  ok: boolean;
+  message: string;
+  warning?: string | null;
+  deleted: {
+    parts: number;
+    compatibilities: number;
+    images: number;
+    inventory: number;
+    activity_logs: number;
+    deletedObjects: number;
+  };
 }

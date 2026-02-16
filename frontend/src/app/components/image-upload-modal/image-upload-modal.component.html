@@ -1,15 +1,15 @@
-<div *ngIf="isOpen" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+<div *ngIf="isOpen" class="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4">
     <!-- Backdrop -->
     <div class="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" (click)="closeModal()">
     </div>
 
     <!-- Modal Content -->
     <div
-        class="relative bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+        class="relative bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md max-h-[94vh] overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
 
         <!-- Header -->
-        <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
-            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+        <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50 gap-3">
+            <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
                 <lucide-icon [img]="Image" [size]="20" class="text-indigo-400"></lucide-icon>
                 Subir Imagen de Parte
             </h3>
@@ -20,7 +20,7 @@
         </div>
 
         <!-- Body -->
-        <div class="p-6 space-y-6">
+        <div class="p-4 sm:p-6 space-y-5 sm:space-y-6 overflow-y-auto flex-1">
 
             <!-- Info Banner -->
             <div class="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4">
@@ -87,13 +87,13 @@
         </div>
 
         <!-- Footer -->
-        <div class="px-6 py-4 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-3">
+        <div class="px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-800 bg-slate-900/50 flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
             <button (click)="closeModal()"
-                class="px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors text-sm font-medium">
+                class="w-full sm:w-auto px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors text-sm font-medium">
                 Cancelar
             </button>
             <button (click)="uploadImage()" [disabled]="isUploading || !partNumber || !selectedFile"
-                class="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-500 text-white rounded-lg transition-all text-sm font-medium shadow-lg shadow-indigo-600/20 flex items-center gap-2">
+                class="w-full sm:w-auto px-6 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-500 text-white rounded-lg transition-all text-sm font-medium shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2">
                 <span *ngIf="isUploading"
                     class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
                 {{ isUploading ? 'Subiendo...' : 'Subir Imagen' }}

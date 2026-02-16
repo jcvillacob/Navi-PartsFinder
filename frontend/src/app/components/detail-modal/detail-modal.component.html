@@ -1,14 +1,14 @@
-<div class="fixed inset-0 z-50 flex items-center justify-center p-4" *ngIf="isOpen">
+<div class="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4" *ngIf="isOpen">
   <!-- Backdrop -->
   <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" (click)="onClose()"></div>
 
   <!-- Modal Content -->
   <div
-    class="relative bg-slate-900 border border-indigo-500/30 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+    class="relative bg-slate-900 border border-indigo-500/30 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[94vh] overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col">
 
     <!-- Header -->
-    <div class="bg-indigo-900/20 px-6 py-4 border-b border-indigo-900/30 flex justify-between items-center">
-      <h3 class="text-xl font-bold text-white flex items-center gap-2">
+    <div class="bg-indigo-900/20 px-4 sm:px-6 py-3 sm:py-4 border-b border-indigo-900/30 flex justify-between items-center gap-3">
+      <h3 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
         <lucide-icon [img]="Package" [size]="20" class="text-emerald-400"></lucide-icon>
         Disponibilidad de Inventario
       </h3>
@@ -19,7 +19,7 @@
     </div>
 
     <!-- Body -->
-    <div class="p-6 space-y-6">
+    <div class="p-4 sm:p-6 space-y-5 sm:space-y-6 overflow-y-auto flex-1">
 
       <!-- Loading State -->
       <div *ngIf="isLoading" class="flex flex-col items-center justify-center py-12">
@@ -30,10 +30,10 @@
       <!-- Content -->
       <ng-container *ngIf="!isLoading">
         <!-- Main Info -->
-        <div class="flex items-center justify-between pb-4 border-b border-indigo-900/30">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-indigo-900/30">
           <div class="flex flex-col gap-1">
             <span class="text-xs text-indigo-300 uppercase tracking-wider font-semibold">Referencia</span>
-            <span class="text-2xl font-mono font-bold text-emerald-400">{{ partNumber }}</span>
+            <span class="text-xl sm:text-2xl font-mono font-bold text-emerald-400 break-all">{{ partNumber }}</span>
           </div>
           <div class="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border"
             [ngClass]="isAvailable ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'">
@@ -96,9 +96,9 @@
     </div>
 
     <!-- Footer -->
-    <div class="bg-slate-950/30 px-6 py-4 border-t border-indigo-900/30 flex justify-end">
+    <div class="bg-slate-950/30 px-4 sm:px-6 py-3 sm:py-4 border-t border-indigo-900/30 flex justify-end">
       <button (click)="onClose()"
-        class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm">
+        class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm">
         Cerrar
       </button>
     </div>

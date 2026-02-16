@@ -45,21 +45,37 @@ async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS part_compatibilities (
           id SERIAL PRIMARY KEY,
           part_id INTEGER NOT NULL REFERENCES parts(id) ON DELETE CASCADE,
-          description TEXT NOT NULL,
-          response_brand TEXT DEFAULT 'Navitrans',
-          image_url TEXT,
+          compatible_part_number TEXT NOT NULL DEFAULT '',
+          equipment_model TEXT NOT NULL DEFAULT '',
+          original_brand TEXT NOT NULL DEFAULT '',
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
-      -- Tabla de Compatibilidades
-      CREATE TABLE IF NOT EXISTS part_compatibilities (
-          id SERIAL PRIMARY KEY,
-          part_id INTEGER NOT NULL REFERENCES parts(id) ON DELETE CASCADE,
-          compatible_part_number TEXT NOT NULL,
-          equipment_model TEXT NOT NULL,
-          original_brand TEXT NOT NULL,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
+      -- Migración para instalaciones con esquema anterior de compatibilidades
+      ALTER TABLE part_compatibilities
+        ADD COLUMN IF NOT EXISTS compatible_part_number TEXT,
+        ADD COLUMN IF NOT EXISTS equipment_model TEXT,
+        ADD COLUMN IF NOT EXISTS original_brand TEXT;
+
+      UPDATE part_compatibilities
+      SET
+        compatible_part_number = COALESCE(compatible_part_number, ''),
+        equipment_model = COALESCE(equipment_model, ''),
+        original_brand = COALESCE(original_brand, '')
+      WHERE
+        compatible_part_number IS NULL
+        OR equipment_model IS NULL
+        OR original_brand IS NULL;
+
+      ALTER TABLE part_compatibilities
+        ALTER COLUMN compatible_part_number SET DEFAULT '',
+        ALTER COLUMN equipment_model SET DEFAULT '',
+        ALTER COLUMN original_brand SET DEFAULT '';
+
+      ALTER TABLE part_compatibilities
+        ALTER COLUMN compatible_part_number SET NOT NULL,
+        ALTER COLUMN equipment_model SET NOT NULL,
+        ALTER COLUMN original_brand SET NOT NULL;
 
       -- Tabla de Imágenes
       CREATE TABLE IF NOT EXISTS part_images (
@@ -68,6 +84,40 @@ async function initializeDatabase() {
           image_path TEXT NOT NULL,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      -- Migración de metadatos de imágenes para storage S3
+      ALTER TABLE part_images
+        ADD COLUMN IF NOT EXISTS storage_provider TEXT NOT NULL DEFAULT 's3',
+        ADD COLUMN IF NOT EXISTS bucket TEXT NOT NULL DEFAULT '',
+        ADD COLUMN IF NOT EXISTS object_key_original TEXT,
+        ADD COLUMN IF NOT EXISTS object_key_medium TEXT,
+        ADD COLUMN IF NOT EXISTS object_key_thumb TEXT,
+        ADD COLUMN IF NOT EXISTS content_type TEXT NOT NULL DEFAULT 'image/webp',
+        ADD COLUMN IF NOT EXISTS size_bytes INTEGER NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS width INTEGER,
+        ADD COLUMN IF NOT EXISTS height INTEGER,
+        ADD COLUMN IF NOT EXISTS checksum_sha256 TEXT,
+        ADD COLUMN IF NOT EXISTS is_primary BOOLEAN NOT NULL DEFAULT TRUE,
+        ADD COLUMN IF NOT EXISTS created_by INTEGER REFERENCES users(id),
+        ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;
+
+      UPDATE part_images
+      SET
+        storage_provider = COALESCE(NULLIF(storage_provider, ''), 's3'),
+        content_type = COALESCE(NULLIF(content_type, ''), 'image/webp'),
+        size_bytes = COALESCE(size_bytes, 0),
+        is_primary = COALESCE(is_primary, TRUE),
+        object_key_medium = COALESCE(object_key_medium, image_path),
+        object_key_thumb = COALESCE(object_key_thumb, image_path)
+      WHERE
+        storage_provider IS NULL
+        OR storage_provider = ''
+        OR content_type IS NULL
+        OR content_type = ''
+        OR size_bytes IS NULL
+        OR is_primary IS NULL
+        OR object_key_medium IS NULL
+        OR object_key_thumb IS NULL;
 
       -- Tabla de Logs de Actividad
       CREATE TABLE IF NOT EXISTS activity_logs (
@@ -80,9 +130,26 @@ async function initializeDatabase() {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
+      -- Tabla de disponibilidad (snapshot local sincronizado)
+      CREATE TABLE IF NOT EXISTS inventory_availability (
+          id SERIAL PRIMARY KEY,
+          part_number TEXT NOT NULL,
+          zona TEXT NOT NULL DEFAULT '',
+          sede TEXT NOT NULL DEFAULT '',
+          almacen TEXT NOT NULL DEFAULT '',
+          cantidad NUMERIC NOT NULL DEFAULT 0,
+          costo_unitario NUMERIC NOT NULL DEFAULT 0,
+          source_updated_at TIMESTAMP,
+          synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(part_number, zona, sede, almacen)
+      );
+
       -- ÍNDICES para búsqueda rápida
       CREATE INDEX IF NOT EXISTS idx_parts_number ON parts(part_number);
       CREATE INDEX IF NOT EXISTS idx_compat_number ON part_compatibilities(compatible_part_number);
+      CREATE INDEX IF NOT EXISTS idx_inventory_part_number ON inventory_availability(part_number);
+      CREATE INDEX IF NOT EXISTS idx_part_images_primary ON part_images(part_id, is_primary, created_at DESC);
     `);
 
     // Crear usuario admin por defecto si no existe
@@ -117,7 +184,7 @@ async function initializeDatabase() {
           pc.equipment_model,
           pc.original_brand,
           p.response_brand,
-          (SELECT pi.image_path FROM part_images pi WHERE pi.part_id = p.id LIMIT 1) AS image
+          p.image_url AS image
       FROM parts p
       LEFT JOIN part_compatibilities pc ON p.id = pc.part_id
     `);

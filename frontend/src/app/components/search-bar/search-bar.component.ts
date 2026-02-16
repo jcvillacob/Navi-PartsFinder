@@ -119,10 +119,10 @@ export class SearchBarComponent implements OnDestroy {
 
   getSuggestionTypeClass(type: string): string {
     switch(type) {
-      case 'part': return 'bg-indigo-500/20 text-indigo-300';
-      case 'compatible': return 'bg-green-500/20 text-green-300';
-      case 'equipment': return 'bg-amber-500/20 text-amber-300';
-      default: return 'bg-slate-500/20 text-slate-300';
+      case 'part': return 'suggestion-badge suggestion-badge--part';
+      case 'compatible': return 'suggestion-badge suggestion-badge--compatible';
+      case 'equipment': return 'suggestion-badge suggestion-badge--equipment';
+      default: return 'suggestion-badge suggestion-badge--default';
     }
   }
 }

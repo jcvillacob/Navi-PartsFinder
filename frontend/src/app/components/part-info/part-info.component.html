@@ -1,24 +1,26 @@
 <div
-  class="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 backdrop-blur-md relative overflow-hidden group shadow-xl">
+  class="bg-slate-900/50 border border-slate-800 rounded-2xl p-4 sm:p-6 backdrop-blur-md relative overflow-hidden group shadow-xl">
   <!-- Efecto decorativo -->
   <div class="absolute top-0 right-0 w-40 h-40 bg-[var(--secondary)]/12 rounded-full blur-3xl -mr-20 -mt-20"></div>
 
-  <div class="flex items-center justify-between mb-6">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5 sm:mb-6">
     <div class="flex items-center gap-2">
       <lucide-icon [img]="Info" [size]="20" class="text-[var(--text-light)]"></lucide-icon>
       <h2 class="text-sm font-bold text-[var(--text)] uppercase tracking-wider">Información General</h2>
     </div>
     <button *ngIf="part" (click)="onCheckAvailability()"
-      class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm shadow-lg shadow-emerald-900/30">
+      class="w-full sm:w-auto justify-center flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm shadow-lg shadow-emerald-900/30">
       <lucide-icon [img]="Package" [size]="16"></lucide-icon>
       Disponibilidad
     </button>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-8" *ngIf="part">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-8" *ngIf="part">
     <div class="flex flex-col justify-center">
-      <h3 class="text-5xl font-bold text-white mb-2 font-mono tracking-tight">{{ part.partNumber }}</h3>
-      <p class="text-xl text-slate-300 font-medium">{{ part.description }}</p>
+      <h3 class="text-4xl sm:text-5xl leading-tight font-bold text-white mb-2 font-mono tracking-tight break-words [overflow-wrap:anywhere]">
+        {{ part.partNumber }}
+      </h3>
+      <p class="text-lg sm:text-xl text-slate-300 font-medium break-words">{{ part.description }}</p>
     </div>
     <div class="grid grid-cols-1 gap-4 text-sm">
       <div

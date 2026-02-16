@@ -3,7 +3,7 @@
   <!-- Header -->
   <app-header></app-header>
 
-  <main class="max-w-[1600px] mx-auto px-4 md:px-12 mt-8">
+  <main class="max-w-[1600px] mx-auto px-3 sm:px-4 md:px-8 lg:px-12 mt-4 sm:mt-8">
 
     <!-- Buscador -->
     <div class="mt-2"><app-search-bar (search)="onSearch($event)"></app-search-bar></div>
@@ -15,10 +15,10 @@
     </div>
 
     <!-- Layout principal -->
-    <div *ngIf="!isLoading" class="grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-[600px]">
+    <div *ngIf="!isLoading" class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 min-h-[400px] lg:min-h-[600px]">
 
       <!-- Columna izquierda (Info + Tabla) -->
-      <div class="lg:col-span-8 flex flex-col gap-8 h-full">
+      <div class="lg:col-span-8 flex flex-col gap-4 sm:gap-6 lg:gap-8 h-full">
         <app-part-info [part]="currentPart" (checkAvailability)="onCheckAvailability($event)"></app-part-info>
         <app-compatibility-table [compatibilities]="compatibilities"></app-compatibility-table>
       </div>
@@ -39,4 +39,3 @@
     (close)="onCloseModal()">
   </app-detail-modal>
 </div>
-

@@ -1,7 +1,8 @@
-import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, OnChanges, OnDestroy, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Part } from '../../models/part.model';
 import { LucideAngularModule, Box, X, ZoomIn, ImageOff, Upload } from 'lucide-angular';
+import { PartsService } from '../../services/parts.service';
 
 @Component({
   selector: 'app-part-preview',
@@ -10,7 +11,7 @@ import { LucideAngularModule, Box, X, ZoomIn, ImageOff, Upload } from 'lucide-an
   templateUrl: './part-preview.component.html',
   styleUrl: './part-preview.component.scss'
 })
-export class PartPreviewComponent implements OnChanges {
+export class PartPreviewComponent implements OnChanges, OnDestroy {
   @Input() part?: Part;
   readonly Box = Box;
   readonly X = X;
@@ -21,24 +22,28 @@ export class PartPreviewComponent implements OnChanges {
   selectedImage: string = '';
   isZoomed: boolean = false;
   imageError: boolean = false;
+  isLoadingImage: boolean = false;
+  private objectUrl: string | null = null;
+
+  constructor(private partsService: PartsService) {}
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['part']) {
       // Resetear estado completo al cambiar de parte
       this.imageError = false;
       this.isZoomed = false;
+      this.selectedImage = '';
+      this.isLoadingImage = false;
+      this.clearObjectUrl();
 
-      if (this.part?.imageUrl) {
-        this.selectedImage = this.part.imageUrl;
-      } else {
-        this.selectedImage = '';
+      if (this.part?.partNumber && this.part?.imageUrl) {
+        this.loadPrivateImage(this.part.partNumber);
       }
     }
   }
 
-  selectThumbnail(imageUrl: string): void {
-    this.selectedImage = imageUrl;
-    this.imageError = false;
+  ngOnDestroy(): void {
+    this.clearObjectUrl();
   }
 
   toggleZoom(): void {
@@ -52,6 +57,31 @@ export class PartPreviewComponent implements OnChanges {
   }
 
   get hasValidImage(): boolean {
-    return !!(this.selectedImage || this.part?.imageUrl) && !this.imageError;
+    return !!this.selectedImage && !this.imageError;
+  }
+
+  private loadPrivateImage(partNumber: string): void {
+    this.isLoadingImage = true;
+    this.partsService.getPartImage(partNumber, 'medium').subscribe({
+      next: (blob) => {
+        this.clearObjectUrl();
+        this.objectUrl = URL.createObjectURL(blob);
+        this.selectedImage = this.objectUrl;
+        this.imageError = false;
+        this.isLoadingImage = false;
+      },
+      error: () => {
+        this.selectedImage = '';
+        this.imageError = true;
+        this.isLoadingImage = false;
+      }
+    });
+  }
+
+  private clearObjectUrl(): void {
+    if (this.objectUrl) {
+      URL.revokeObjectURL(this.objectUrl);
+      this.objectUrl = null;
+    }
   }
 }

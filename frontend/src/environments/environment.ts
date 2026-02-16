@@ -1,4 +1,7 @@
+const runtimeOrigin =
+  typeof window !== "undefined" ? window.location.origin : "http://localhost:3100";
+
 export const environment = {
-  apiUrl: 'http://localhost:3000/api',
-  baseUrl: 'http://localhost:3000'
+  apiUrl: `${runtimeOrigin}/api`,
+  baseUrl: runtimeOrigin,
 };
